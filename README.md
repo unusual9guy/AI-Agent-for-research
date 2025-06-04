@@ -1,11 +1,11 @@
 # 🤖 AI Research Agent
 
-An intelligent AI research assistant built with LangChain that can conduct comprehensive research on any topic and generate professional academic-style reports. The agent uses multiple search tools and LLM providers to deliver well-structured, cited research outputs.
+An intelligent AI research assistant built with LangChain that can conduct comprehensive research on any topic and generate professional academic-style reports in markdown format. The agent uses multiple search tools and LLM providers to deliver well-structured, cited research outputs.
 
 ## ✨ Features
 
 - 🔍 **Multi-Source Research**: Integrates Wikipedia, Tavily web search, and custom tools
-- 🧠 **Multiple LLM Support**: Works with OpenAI, Groq, Google Gemini, and Ollama
+- 🧠 **Multiple LLM Support**: Works with OpenAI, Google Gemini
 - 📄 **Structured Output**: Generates properly formatted academic reports with citations
 - 💾 **Automatic File Saving**: Saves research outputs to organized files
 - 🖥️ **Interactive CLI**: User-friendly command-line interface with colored output
@@ -16,7 +16,7 @@ An intelligent AI research assistant built with LangChain that can conduct compr
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Framework** | 🦜 [LangChain](https://langchain.com/) | Agent orchestration and tool management |
-| **LLM Providers** | 🤖 OpenAI GPT-4, Groq Llama, Google Gemini, Ollama | Natural language processing and generation |
+| **LLM Providers** | 🤖 OpenAI GPT-4, Google Gemini| Natural language processing and generation |
 | **Search Tools** | 🌐 Tavily API, Wikipedia API, DuckDuckGo | Information retrieval and web searching |
 | **Data Validation** | 📋 Pydantic | Output structure validation and parsing |
 | **Environment** | 🐍 Python 3.8+ | Core programming language |
@@ -56,7 +56,6 @@ Create a `.env` file in the project root and add your API keys:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
-GROQ_API_KEY=your_groq_api_key_here
 TAVILY_API_KEY=your_tavily_api_key_here
 GOOGLE_API_KEY=your_google_api_key_here
 ```
@@ -67,13 +66,14 @@ GOOGLE_API_KEY=your_google_api_key_here
 
 ```
 ai-research-agent/
-├── main.py              # Main application entry point
-├── tools.py             # Research tools configuration
-├── cl_ui.py             # Command-line user interface
-├── requirements.txt     # Python dependencies
-├── .env                 # Environment variables
-├── outputs/             # Generated research reports
-└── README.md           # This file
+├── main.py                
+├── tools.py               
+├── cl_ui.py               
+├── requirements.txt       
+├── .env                   
+├── outputs/               
+│   └── research_output.md 
+└── README.md           
 ```
 
 ## 🚀 Usage
@@ -86,14 +86,8 @@ Run the research agent with your preferred LLM:
 # Using OpenAI GPT-4
 python main.py openai
 
-# Using Groq Llama
-python main.py groq
-
 # Using Google Gemini
 python main.py google_genai
-
-# Using Ollama (local)
-python main.py ollama
 ```
 
 ### Example Session 🎯
@@ -115,9 +109,7 @@ Enter your research topic below. The assistant will generate a detailed, academi
 | Provider | Model | Command |
 |----------|-------|---------|
 | 🤖 OpenAI | GPT-4o-mini | `python main.py openai` |
-| ⚡ Groq | Llama3-70b-8192 | `python main.py groq` |
 | 🟢 Google | Gemini-2.5-flash | `python main.py google_genai` |
-| 🦙 Ollama | Llama3.2:3b | `python main.py ollama` |
 
 ## 🔧 Research Tools
 
