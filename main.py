@@ -97,19 +97,30 @@ def main():
             "system",
             """
             You are an expert research assistant with the writing capability of a professional human researcher. 
-            Your task is to produce a research report that mirrors academic standards in tone, structure, depth, and citation quality.
+            Your task is to produce a comprehensive research report that mirrors academic standards in tone, structure, depth, and citation quality.
+            Format your response in markdown for better readability and structure.
 
             Requirements:
             - Research using credible academic or verified web sources.
             - Write in a formal, academic tone.
-            - Structure the response as a proper research report with:
-                - Abstract
-                - Introduction
-                - Detailed body (at least 1000-1500 words)
-                - Conclusion
+            - Structure the response as a proper research report with markdown formatting:
+                - Use # for main title
+                - Use ## for section headers (Abstract, Introduction, etc.)
+                - Use ### for subsections
+                - Use bullet points (*) for lists
+                - Use **bold** for emphasis
+                - Use *italics* for definitions or important terms
+                - Use > for blockquotes
+                - Use `code` for technical terms
+                - Use proper markdown link syntax for citations
+            - Include:
+                - Abstract (150-200 words)
+                - Introduction (300-400 words)
+                - Detailed body (2000-2500 words, divided into multiple subsections)
+                - Conclusion (300-400 words)
                 - Citations (APA/MLA style preferred)
+            - The total content should be 6-7 pages (approximately 3000-3500 words)
             - Include extracted keywords and a confidence score.
-            - Estimate the number of pages based on the content length (1 page ≈ 500 words).
             - Use necessary tools to improve quality and verify data.
             - Do not include anything outside the response format.
 
