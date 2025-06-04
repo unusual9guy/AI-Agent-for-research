@@ -36,18 +36,20 @@ class ResearchResponse(BaseModel):
 
 # Function to set up the LLM based on the type provided
 def set_llm(type : str):
-    if type == "groq":
-        from langchain_groq import ChatGroq
-        llm = ChatGroq(
-            model="llama3-70b-8192",
-            temperature=0, 
-            )  
-    elif type == "ollama":
-        from langchain_ollama import ChatOllama
-        llm = ChatOllama(
-            model="llama3.2:3b", 
-            temperature=0)
-    elif type == "google_genai":
+    #Currently groq dosen't support external tools usage in the agent
+    # if type == "groq": 
+    #     from langchain_groq import ChatGroq
+    #     llm = ChatGroq(
+    #         model="llama3-70b-8192",
+    #         temperature=0, 
+    #         )  
+    #Currently ollama dosen't support external tools usage in the agent
+    # elif type == "ollama":
+    #     from langchain_ollama import ChatOllama
+    #     llm = ChatOllama(
+    #         model="llama3.2:3b", 
+    #         temperature=0)
+    if type == "google_genai":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash-preview-04-17",
@@ -80,8 +82,8 @@ def main():
     type = sys.argv[1].lower()
 
     # checking if the type is valid
-    if type not in ["groq", "ollama", "google_genai", "openai"]:
-        print(f"Invalid LLM type: {type}. Available types are: groq, ollama, google_genai, openai")
+    if type not in ["google_genai", "openai"]: # "groq", "ollama",
+        print(f"Invalid LLM type: {type}. Available types are: google_genai, openai")
         sys.exit(1)
     
     print(f"Using LLM type: {type}")
