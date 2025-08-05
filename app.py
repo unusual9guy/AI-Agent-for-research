@@ -3,10 +3,23 @@ import os
 from io import BytesIO
 from datetime import datetime
 import time
+from datetime import datetime, timedelta
 
 # Import your backend logic
 from main import ResearchResponse, set_llm, generate_report
 from tools import save_to_txt
+from config import RATE_LIMIT_CONFIG, EXAMPLE_TOPICS
+
+# Rate limiting configuration
+MAX_REQUESTS_PER_SESSION = RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]
+COOLDOWN_MINUTES = RATE_LIMIT_CONFIG["COOLDOWN_MINUTES"]
+ENABLE_RATE_LIMITING = RATE_LIMIT_CONFIG["ENABLE_RATE_LIMITING"]
+
+# Initialize session state for rate limiting
+if 'request_count' not in st.session_state:
+    st.session_state['request_count'] = 0
+if 'last_request_time' not in st.session_state:
+    st.session_state['last_request_time'] = None
 
 # Custom CSS for better styling
 st.set_page_config(
@@ -195,6 +208,16 @@ with st.sidebar:
     
     st.markdown("---")
     
+    # Usage counter
+    st.markdown("### 📊 Usage")
+    remaining_requests = MAX_REQUESTS_PER_SESSION - st.session_state['request_count']
+    st.metric("Remaining Requests", remaining_requests)
+    
+    if st.session_state['last_request_time']:
+        st.caption(f"Last request: {st.session_state['last_request_time'].strftime('%H:%M:%S')}")
+    
+    st.markdown("---")
+    
     # Tips section
     st.markdown("### 💡 Tips")
     st.markdown("""
@@ -209,14 +232,7 @@ st.markdown("### 🔍 Research Topic")
 
 # Example topic buttons - FIXED TO WORK PROPERLY
 st.markdown("**💡 Example Topics:**")
-example_topics = [
-    "Machine Learning in Healthcare",
-    "Blockchain Technology Applications", 
-    "Quantum Computing Developments",
-    "Sustainable Energy Solutions",
-    "Space Exploration Technologies",
-    "Climate Change Impact"
-]
+example_topics = EXAMPLE_TOPICS
 
 cols = st.columns(3)
 for i, example in enumerate(example_topics):
@@ -240,6 +256,27 @@ col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if st.button("🚀 Generate Research Report", type="primary", use_container_width=True):
         if topic:
+            # Check rate limiting
+            if ENABLE_RATE_LIMITING:
+                current_time = datetime.now()
+                
+                # Check if user has exceeded request limit
+                if st.session_state['request_count'] >= MAX_REQUESTS_PER_SESSION:
+                    st.error(f"⚠️ Rate limit exceeded! You can only make {MAX_REQUESTS_PER_SESSION} requests per session. Please refresh the page to reset.")
+                    st.stop()
+                
+                # Check cooldown period
+                if st.session_state['last_request_time']:
+                    time_diff = current_time - st.session_state['last_request_time']
+                    if time_diff.total_seconds() < COOLDOWN_MINUTES * 60:
+                        remaining_time = COOLDOWN_MINUTES * 60 - time_diff.total_seconds()
+                        st.error(f"⏰ Please wait {int(remaining_time/60)} minutes and {int(remaining_time%60)} seconds before making another request.")
+                        st.stop()
+                
+                # Update rate limiting counters
+                st.session_state['request_count'] += 1
+                st.session_state['last_request_time'] = current_time
+            
             st.session_state['generate_report'] = True
         else:
             st.error("Please enter a research topic first!")
