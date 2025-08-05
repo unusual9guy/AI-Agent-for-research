@@ -1,6 +1,7 @@
 langchain 
 wikipedia
 langchain-community 
+langchain-tavily
 langchain-openai 
 langchain-anthropic
 langchain-google-genai
