@@ -1,5 +1,5 @@
 from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun
-from langchain_tavily import TavilySearchResults
+from langchain_tavily import TavilySearch
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain.tools import Tool
 from langchain.tools import StructuredTool
@@ -27,7 +27,7 @@ load_dotenv()
 
 
 # ----------------------------- TAVILY SEARCH TOOL -----------------------------
-tavily = TavilySearchResults(k=5)  # You can adjust k as needed
+tavily = TavilySearch(k=5)  # You can adjust k as needed
 
 search_tool = Tool(
     name="web_search_tool",
