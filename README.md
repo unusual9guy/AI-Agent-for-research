@@ -174,10 +174,11 @@ Edit `config.py` to modify the web interface settings:
 ```python
 # Rate limiting settings
 RATE_LIMIT_CONFIG = {
-    "MAX_REQUESTS_PER_SESSION": 10,  # Increase/decrease requests
-    "COOLDOWN_MINUTES": 5,  # Adjust cooldown period
+    "MAX_REQUESTS_PER_SESSION": 2,  # Increase/decrease requests
+    "COOLDOWN_MINUTES": 10,  # Adjust cooldown period
     "ENABLE_RATE_LIMITING": True,  # Toggle on/off
 }
+```
 
 # Example topics
 EXAMPLE_TOPICS = [
