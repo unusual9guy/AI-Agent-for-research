@@ -13,6 +13,7 @@ An intelligent AI research assistant built with LangChain and Streamlit that can
 - 👁️ **Live Preview**: View rendered reports before editing
 - ✏️ **In-App Editing**: Edit generated reports directly in the interface
 - 📥 **Easy Download**: Download reports in markdown format
+- 🔒 **Rate Limiting**: Built-in API usage limits to prevent excessive costs
 - 🎓 **Professional Formatting**: Produces research reports with abstracts, introductions, detailed analysis, and conclusions
 
 ## 🛠️ Tech Stack
@@ -74,6 +75,7 @@ ai-research-agent/
 ├── app.py                 # Main Streamlit web application
 ├── main.py               # Core research logic and agent
 ├── tools.py              # Research tools and utilities
+├── config.py             # Configuration and rate limiting settings
 ├── cl_ui.py              # Command-line interface (legacy)
 ├── requirements.txt      # Python dependencies
 ├── .env                  # Environment variables
@@ -167,14 +169,18 @@ The agent generates structured research reports containing:
 
 ### 🔧 Customizing the Interface
 
-Edit `app.py` to modify the web interface:
+Edit `config.py` to modify the web interface settings:
 
 ```python
-# Change the page title
-st.set_page_config(page_title="Your Custom Title")
+# Rate limiting settings
+RATE_LIMIT_CONFIG = {
+    "MAX_REQUESTS_PER_SESSION": 10,  # Increase/decrease requests
+    "COOLDOWN_MINUTES": 5,  # Adjust cooldown period
+    "ENABLE_RATE_LIMITING": True,  # Toggle on/off
+}
 
-# Modify example topics
-example_topics = [
+# Example topics
+EXAMPLE_TOPICS = [
     "Your Custom Topic 1",
     "Your Custom Topic 2",
     # Add more topics
