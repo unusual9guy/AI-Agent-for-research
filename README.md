@@ -235,6 +235,10 @@ tavily = TavilySearchResults(k=10)
    - The agent expects structured JSON output
    - Check LLM provider compatibility and model versions
 
+6. **⚠️ Deprecation Warnings**
+   - If you see TavilySearchResults deprecation warnings, ensure `langchain-tavily` is installed
+   - Run: `pip install langchain-tavily` to fix import issues
+
 ### 🆘 Getting Help
 
 If you encounter issues:
