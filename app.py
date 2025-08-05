@@ -265,13 +265,14 @@ with col2:
                     st.error(f"⚠️ Rate limit exceeded! You can only make {MAX_REQUESTS_PER_SESSION} requests per session. Please refresh the page to reset.")
                     st.stop()
                 
-                # Check cooldown period
-                if st.session_state['last_request_time']:
-                    time_diff = current_time - st.session_state['last_request_time']
-                    if time_diff.total_seconds() < COOLDOWN_MINUTES * 60:
-                        remaining_time = COOLDOWN_MINUTES * 60 - time_diff.total_seconds()
-                        st.error(f"⏰ Please wait {int(remaining_time/60)} minutes and {int(remaining_time%60)} seconds before making another request.")
-                        st.stop()
+                # Check cooldown period only if approaching limit (1 request remaining)
+                if st.session_state['request_count'] == MAX_REQUESTS_PER_SESSION - 1:
+                    if st.session_state['last_request_time']:
+                        time_diff = current_time - st.session_state['last_request_time']
+                        if time_diff.total_seconds() < COOLDOWN_MINUTES * 60:
+                            remaining_time = COOLDOWN_MINUTES * 60 - time_diff.total_seconds()
+                            st.error(f"⏰ Please wait {int(remaining_time/60)} minutes and {int(remaining_time%60)} seconds before making your final request.")
+                            st.stop()
                 
                 # Update rate limiting counters
                 st.session_state['request_count'] += 1
