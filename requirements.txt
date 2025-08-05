@@ -1,7 +1,7 @@
-langchain 
+langchain>=0.3.0
 wikipedia
-langchain-community 
-langchain-tavily
+langchain-community>=0.3.0
+langchain-tavily>=0.1.0
 langchain-openai 
 langchain-anthropic
 langchain-google-genai
