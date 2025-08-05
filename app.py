@@ -324,12 +324,11 @@ if st.session_state.get('md_content'):
     # 1. Show Preview First
     st.markdown("### 📄 Report Preview")
     st.markdown(st.session_state.get('edited_md', st.session_state.get('md_content', "")), unsafe_allow_html=True)
-    
+
     # 2. Edit Option
     st.markdown("### ✏️ Edit Report")
     edited_md = st.text_area(
         "Edit your research report:",
-        value=st.session_state.get('edited_md', st.session_state.get('md_content', "")),
         height=400,
         key="edited_md",
         help="You can edit the generated report before downloading"
