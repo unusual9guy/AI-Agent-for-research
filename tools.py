@@ -1,4 +1,5 @@
-from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun, TavilySearchResults
+from langchain_community.tools import WikipediaQueryRun, DuckDuckGoSearchRun
+from langchain_tavily import TavilySearchResults
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain.tools import Tool
 from langchain.tools import StructuredTool
