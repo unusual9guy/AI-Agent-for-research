@@ -52,7 +52,7 @@ def set_llm(type : str):
     if type == "google_genai":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-04-17",
+            model="gemini-2.5-flash",
             temperature=0,
         )
     elif type == "openai":
