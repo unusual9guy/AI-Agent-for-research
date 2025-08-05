@@ -265,8 +265,8 @@ with col2:
                     st.error(f"⚠️ Rate limit exceeded! You can only make {MAX_REQUESTS_PER_SESSION} requests per session. Please refresh the page to reset.")
                     st.stop()
                 
-                # Check cooldown period only if approaching limit (1 request remaining)
-                if st.session_state['request_count'] == MAX_REQUESTS_PER_SESSION - 1:
+                # Check cooldown period only when making the final request (after 1st request)
+                if st.session_state['request_count'] == 1:  # After 1st request, before 2nd
                     if st.session_state['last_request_time']:
                         time_diff = current_time - st.session_state['last_request_time']
                         if time_diff.total_seconds() < COOLDOWN_MINUTES * 60:
@@ -324,6 +324,10 @@ if st.session_state.get('md_content'):
     # 1. Show Preview First
     st.markdown("### 📄 Report Preview")
     st.markdown(st.session_state.get('edited_md', st.session_state.get('md_content', "")), unsafe_allow_html=True)
+    
+    # Add model attribution in UI only
+    model_display_name = "OpenAI GPT" if model_choice == "openai" else "Google Gemini"
+    st.markdown(f"---\n*Generated using {model_display_name}*", unsafe_allow_html=True)
 
     # 2. Edit Option
     st.markdown("### ✏️ Edit Report")
