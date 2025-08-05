@@ -10,3 +10,6 @@ pydantic
 duckduckgo-search
 langchain-ollama
 termcolor
+streamlit 
+matplotlib
+markdown 
