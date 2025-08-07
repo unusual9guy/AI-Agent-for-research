@@ -10,9 +10,9 @@ RATE_LIMIT_CONFIG = {
 # API Configuration
 API_CONFIG = {
     "OPENAI_MODEL": "gpt-4o-mini",  # Default OpenAI model
-    "GOOGLE_MODEL": "gemini-2.0-flash-exp",  # Default Google model
-    "MAX_TOKENS": 4000,  # Maximum tokens per request
-    "TEMPERATURE": 0.7,  # Creativity level (0.0 to 1.0)
+    "GOOGLE_MODEL": "gemini-1.5-flash",  # Default Google model
+    "MAX_TOKENS": 10000,  # Maximum tokens per request
+    "TEMPERATURE": 0.0,  # Creativity level (0.0 to 1.0)
 }
 
 # UI Configuration
@@ -21,6 +21,9 @@ UI_CONFIG = {
     "PAGE_ICON": "🤖",
     "LAYOUT": "wide",
     "SIDEBAR_STATE": "expanded",
+    "COLUMN_LAYOUT": [1, 2, 1],  # Layout ratios for main content
+    "TEXT_AREA_HEIGHT": 400,  # Height for text area in pixels
+    "PROGRESS_STEPS": [0, 50, 100],  # Progress bar steps
 }
 
 # Example Topics
