@@ -2,7 +2,7 @@
 
 # Rate Limiting Settings
 RATE_LIMIT_CONFIG = {
-    "MAX_REQUESTS_PER_SESSION": 2,  # Maximum requests per session
+    "MAX_REQUESTS_PER_SESSION": 4,  # Maximum requests per session
     "COOLDOWN_MINUTES": 10,  # Cooldown period between requests
     "ENABLE_RATE_LIMITING": True,  # Toggle rate limiting on/off
 }
