@@ -36,14 +36,14 @@ class ResearchResponse(BaseModel):
 
 # Function to set up the LLM based on the type provided
 def set_llm(type : str):
-    #Currently groq dosen't support external tools usage in the agent
+    #Currently groq dosen't support external tools usage in the agent - waiting for the update
     # if type == "groq": 
     #     from langchain_groq import ChatGroq
     #     llm = ChatGroq(
     #         model="llama3-70b-8192",
     #         temperature=0, 
     #         )  
-    #Currently ollama dosen't support external tools usage in the agent
+    #Currently ollama dosen't support external tools usage in the agent - waiting for the update
     # elif type == "ollama":
     #     from langchain_ollama import ChatOllama
     #     llm = ChatOllama(
@@ -67,18 +67,19 @@ def set_llm(type : str):
             model="gemini-2.0-flash-lite",
             temperature=0,
         )
-    elif type == "google_genai_2_5":
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            temperature=0,
-        )
     elif type == "google_genai_2_5_lite":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash-lite",
             temperature=0,
         )
+    # for future use
+    # elif type == "google_genai_2_5":
+    #     from langchain_google_genai import ChatGoogleGenerativeAI
+    #     llm = ChatGoogleGenerativeAI(
+    #         model="gemini-2.5-flash",
+    #         temperature=0,
+    #     )
     elif type == "openai":
         from langchain_openai import ChatOpenAI
         llm = ChatOpenAI(
@@ -144,8 +145,30 @@ def generate_report(query, model_choice):
     raw_response = agent_executor.invoke({"query": query})
     try:
         structured_response = parser.parse(raw_response.get("output"))
-    except Exception:
-        structured_response = None
+    except Exception as e:
+        print(f"Parsing error: {str(e)}")
+        print(f"Raw response output: {raw_response.get('output', 'No output found')}")
+        
+        # Try to extract JSON from the response if it's embedded in text
+        try:
+            import re
+            import json
+            output_text = raw_response.get("output", "")
+            
+            # Look for JSON pattern in the response
+            json_match = re.search(r'\{.*\}', output_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                # Try to parse the extracted JSON
+                parsed_data = json.loads(json_str)
+                # Create a ResearchResponse object manually
+                structured_response = ResearchResponse(**parsed_data)
+                print("Successfully parsed JSON using fallback method")
+            else:
+                structured_response = None
+        except Exception as fallback_error:
+            print(f"Fallback parsing also failed: {str(fallback_error)}")
+            structured_response = None
     return raw_response, structured_response
 
 def main():
