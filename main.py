@@ -52,7 +52,7 @@ def set_llm(type : str):
     if type == "google_genai":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             temperature=0,
         )
     elif type == "openai":
@@ -76,37 +76,34 @@ def generate_report(query, model_choice):
             f"""
             You are an expert research assistant with the writing capability of a professional human researcher. 
             Your task is to produce a comprehensive research report that mirrors academic standards in tone, structure, depth, and citation quality.
-            Format your response in markdown for better readability and structure.
 
-            Requirements:
-            - Research using credible academic or verified web sources.
-            - Write in a formal, academic tone.
-            - Structure the response as a proper research report with markdown formatting:
-                - Use # for main title
-                - Use ## for section headers (Abstract, Introduction, etc.)
-                - Use ### for subsections
-                - Use bullet points (*) for lists
-                - Use **bold** for emphasis
-                - Use *italics* for definitions or important terms
-                - Use > for blockquotes
-                - Use `code` for technical terms
-                - Use proper markdown link syntax for citations
-            - Include:
-                - Abstract (150-200 words)
-                - Introduction (300-400 words)
-                - Detailed body (expand to at least 10 pages, 5000+ words, with multiple subsections)
-                - Conclusion (300-400 words)
-                - Citations (APA/MLA style preferred)
+            CRITICAL REQUIREMENTS:
+            - You MUST return a COMPLETE JSON response with ALL required fields
+            - NEVER omit any fields from the JSON structure
+            - ALWAYS include the conclusion field - this is MANDATORY
+            - Research using credible academic or verified web sources
+            - Write in a formal, academic tone
+
+            Report Structure Requirements:
+            - Abstract (150-200 words)
+            - Introduction (300-400 words) 
+            - Detailed body (expand to at least 10 pages, 5000+ words, with multiple subsections)
+            - Conclusion (300-400 words) - THIS FIELD IS MANDATORY AND MUST BE INCLUDED
+            - Citations (APA/MLA style preferred)
             - The total content should be at least 10 pages (approximately 5000+ words)
-            - Include extracted keywords and a confidence score.
-            - Use necessary tools to improve quality and verify data.
-            - Do not include anything outside the response format.
+
+            Content Guidelines:
+            - Use necessary tools to improve quality and verify data
+            - Include extracted keywords and a confidence score
+            - Ensure all content is well-researched and properly cited
 
             When using the save_text_to_file tool, you MUST provide two arguments:
             - data: the markdown content to save
             - topic: the research topic (this will be used to generate the filename)
 
-            Return output **strictly following** this structured JSON format:
+            IMPORTANT: You MUST return a COMPLETE JSON response with ALL fields including topic, abstract, introduction, detailed_research, conclusion, citations, sources, tools_used, keywords, page_count, confidence_score, and last_updated. DO NOT omit any of these fields.
+
+            Return output **strictly following** this structured pydantic format:
             \n{{format_instructions}}""",
         ),
         ("placeholder", "{chat_history}"),
