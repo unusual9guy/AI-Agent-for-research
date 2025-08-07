@@ -252,7 +252,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Choose AI Model:",
-        ["gpt-4o-mini", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
+        ["GPT-4o-mini", "Gemini-1.5-flash", "Gemini-2.0-flash", "Gemini-2.0-flash-lite", "Gemini-2.5-flash-lite"],
         key="model_choice"
     )
     
@@ -363,24 +363,19 @@ if st.session_state.get('generate_report') and topic:
     
     progress_bar = st.progress(UI_CONFIG["PROGRESS_STEPS"][0], text="Starting research...")
     
-    # Initialize structured_response to None
-    structured_response = None
-    
     try:
         with st.spinner("🤖 AI is working on your research report..."):
             progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][1], text="Generating report...")
             # Convert display name to internal format
-            if model_choice == "gpt-4o-mini":
+            if model_choice == "GPT-4o-mini":
                 model_internal = "openai"
-            elif model_choice == "gemini-1.5-flash":
+            elif model_choice == "Gemini-1.5-flash":
                 model_internal = "google_genai"
-            elif model_choice == "gemini-2.0-flash":
+            elif model_choice == "Gemini-2.0-flash":
                 model_internal = "google_genai_2_0"
-            elif model_choice == "gemini-2.0-flash-lite":
+            elif model_choice == "Gemini-2.0-flash-lite":
                 model_internal = "google_genai_2_0_lite"
-            elif model_choice == "gemini-2.5-flash":
-                model_internal = "google_genai_2_5"
-            elif model_choice == "gemini-2.5-flash-lite":
+            elif model_choice == "Gemini-2.5-flash-lite":
                 model_internal = "google_genai_2_5_lite"
             else:
                 model_internal = "openai"  # fallback
@@ -410,6 +405,14 @@ if st.session_state.get('generate_report') and topic:
         # Check if structured_response is None or invalid
         if structured_response is None:
             st.error("❌ Failed to generate structured report. Please try again.")
+            st.info("💡 **Debug Info:** The AI model generated a response, but it couldn't be parsed into the expected format. This might be due to:")
+            st.markdown("""
+            - **Response too large** - The model generated content that's too big for parsing
+            - **Format issues** - The response doesn't match the expected JSON structure
+            - **Missing fields** - Some required fields might be missing from the response
+            
+            **Try:** Using a different AI model or a simpler topic
+            """)
             st.session_state['generate_report'] = False
             st.stop()
         
