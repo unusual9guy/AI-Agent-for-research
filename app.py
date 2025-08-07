@@ -1,25 +1,53 @@
 import streamlit as st
-import os
-from io import BytesIO
-from datetime import datetime
-import time
 from datetime import datetime, timedelta
 
 # Import your backend logic
-from main import ResearchResponse, set_llm, generate_report
-from tools import save_to_txt
-from config import RATE_LIMIT_CONFIG, EXAMPLE_TOPICS
+from main import ResearchResponse, generate_report
+from config import EXAMPLE_TOPICS, UI_CONFIG
 
-# Rate limiting configuration
-MAX_REQUESTS_PER_SESSION = RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]
-COOLDOWN_MINUTES = RATE_LIMIT_CONFIG["COOLDOWN_MINUTES"]
-ENABLE_RATE_LIMITING = RATE_LIMIT_CONFIG["ENABLE_RATE_LIMITING"]
+# Initialize session state
+if 'is_processing' not in st.session_state:
+    st.session_state['is_processing'] = False
+if 'report_completed' not in st.session_state:
+    st.session_state['report_completed'] = False
 
-# Initialize session state for rate limiting
-if 'request_count' not in st.session_state:
-    st.session_state['request_count'] = 0
-if 'last_request_time' not in st.session_state:
-    st.session_state['last_request_time'] = None
+# Input validation function
+def validate_topic(topic: str) -> tuple[bool, str]:
+    """Validate the research topic input"""
+    if not topic or not topic.strip():
+        return False, "Please enter a research topic"
+    
+    topic_clean = topic.strip()
+    if len(topic_clean) < 3:
+        return False, "Topic must be at least 3 characters long"
+    
+    if len(topic_clean) > 500:
+        return False, "Topic is too long (max 500 characters)"
+    
+    # Check for potentially harmful content
+    harmful_patterns = ['<script>', 'javascript:', 'data:text/html']
+    for pattern in harmful_patterns:
+        if pattern.lower() in topic_clean.lower():
+            return False, "Invalid characters detected in topic"
+    
+    return True, ""
+
+# Session state cleanup function
+def cleanup_session_state():
+    """Clean up old session state data to prevent memory leaks"""
+    # Keep only essential session state variables
+    essential_keys = ['selected_topic', 'is_processing', 'report_completed']
+    keys_to_remove = []
+    
+    for key in st.session_state.keys():
+        if key not in essential_keys and key.startswith('_'):
+            keys_to_remove.append(key)
+    
+    for key in keys_to_remove:
+        del st.session_state[key]
+
+def change_state():
+    st.session_state['report_completed'] = True
 
 # Custom CSS for better styling
 st.set_page_config(
@@ -27,6 +55,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 
 # Custom CSS for modern, light design
 st.markdown("""
@@ -76,52 +105,28 @@ st.markdown("""
     .stTextInput > div > div > input {
         border-radius: 10px;
         border: 2px solid #e9ecef;
-        color: #ffffff !important;
-        background-color: transparent !important;
+        color: #333333 !important;
+        background-color: #ffffff !important;
         font-weight: 500;
+        caret-color: #667eea !important;
     }
     
     .stTextInput > div > div > input:focus {
         border-color: #667eea;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-        color: #ffffff !important;
-        background-color: transparent !important;
+        color: #333333 !important;
+        background-color: #ffffff !important;
     }
     
     .stTextInput > div > div > input::placeholder {
-        color: #ffffff !important;
+        color: #6c757d !important;
         font-weight: 400;
-    }
-    
-    /* Force black text in all input fields */
-    input[type="text"], input[type="text"]:focus {
-        color: #ffffff !important;
-        background-color: transparent !important;
-        caret-color: #ffffff !important;
-    }
-    
-    /* Ensure cursor is visible in text inputs */
-    .stTextInput input {
-        caret-color: #ffffff !important;
-        color: #ffffff !important;
-        background-color: transparent !important;
-    }
-    
-    /* Make placeholder text more visible */
-    .stTextInput input::placeholder {
-        color: #ffffff !important;
         opacity: 0.8 !important;
     }
     
-    /* Make the "Choose AI Model:" text white */
+    /* Radio button label styling */
     .stRadio > div > div:first-child {
-        color: white !important;
-        font-weight: 600;
-    }
-    
-    /* Target the label text specifically */
-    .stRadio label:not([for]) {
-        color: white !important;
+        color: #333333 !important;
         font-weight: 600;
     }
     
@@ -166,15 +171,22 @@ st.markdown("""
         font-weight: 600 !important;
     }
     
-    /* Target the actual radio button text */
+    /* Target the actual radio button text (model names) */
     .stRadio label span {
         color: #000000 !important;
         font-weight: 600 !important;
     }
     
-    /* Force override for radio button text */
-    .stRadio * {
+    /* Force override for radio button text - but keep model names black */
+    .stRadio > div > div > div > label {
         color: #000000 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Make "Model Selection" header white */
+    .sidebar .stMarkdown h3 {
+        color: #ffffff !important;
+        font-weight: 600 !important;
     }
     
     .success-message {
@@ -199,24 +211,15 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### ⚙️ Model Selection")
     
-    model_choice = st.radio(
+    model_choice = st.selectbox(
         "Choose AI Model:",
-        ["openai", "google_genai"],
-        format_func=lambda x: "OpenAI GPT" if x == "openai" else "Google Gemini",
-        help="Select the AI model for research generation"
+        ["OpenAI GPT", "Google Gemini"],
+        key="model_choice"
     )
     
-    st.markdown("---")
-    
-    # Usage counter
-    st.markdown("### 📊 Usage")
-    remaining_requests = MAX_REQUESTS_PER_SESSION - st.session_state['request_count']
-    st.metric("Remaining Requests", remaining_requests)
-    
-    if st.session_state['last_request_time']:
-        st.caption(f"Last request: {st.session_state['last_request_time'].strftime('%H:%M:%S')}")
-    
-    st.markdown("---")
+    # Show processing status if currently generating
+    if st.session_state.get('is_processing', False):
+        st.info("🔄 Generating report...")
     
     # Tips section
     st.markdown("### 💡 Tips")
@@ -230,18 +233,28 @@ with st.sidebar:
 st.markdown('<div class="input-container">', unsafe_allow_html=True)
 st.markdown("### 🔍 Research Topic")
 
-# Example topic buttons - FIXED TO WORK PROPERLY
+# Example topic buttons - Responsive layout
 st.markdown("**💡 Example Topics:**")
 example_topics = EXAMPLE_TOPICS
 
-cols = st.columns(3)
-for i, example in enumerate(example_topics):
-    with cols[i % 3]:
-        if st.button(f"💡 {example}", key=f"example_{i}"):
-            st.session_state['selected_topic'] = example
-            st.rerun()
+# Use responsive columns based on screen size
+if len(example_topics) <= 3:
+    cols = st.columns(len(example_topics))
+    for i, example in enumerate(example_topics):
+        with cols[i]:
+            if st.button(f"💡 {example}", key=f"example_{i}"):
+                st.session_state['selected_topic'] = example
+                st.rerun()
+else:
+    # For more topics, use 3 columns with wrapping
+    cols = st.columns(3)
+    for i, example in enumerate(example_topics):
+        with cols[i % 3]:
+            if st.button(f"💡 {example}", key=f"example_{i}"):
+                st.session_state['selected_topic'] = example
+                st.rerun()
 
-# Search bar - REMOVED WHITE BOX STYLING
+# Search bar 
 topic = st.text_input(
     "Enter your research topic:",
     value=st.session_state.get('selected_topic', ''),
@@ -252,33 +265,40 @@ topic = st.text_input(
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Generate Report Button ---
-col1, col2, col3 = st.columns([1, 2, 1])
+# Create an empty container for the button that will be updated dynamically
+button_container = st.empty()
+
+col1, col2, col3 = st.columns(UI_CONFIG["COLUMN_LAYOUT"])
 with col2:
-    if st.button("🚀 Generate Research Report", type="primary", use_container_width=True):
+    # Disable button if currently processing
+    button_disabled = st.session_state.get('is_processing', False)
+    
+    # Show different button text based on state
+    button_text = "⏳ Generating Report..." if button_disabled else "🚀 Generate Research Report"
+    
+    
+    # Render the button in the container
+    if button_container.button(button_text, type="primary", use_container_width=True, disabled=button_disabled):
+        # Check if already processing
+        if st.session_state.get('is_processing', False):
+            st.warning("⏳ Please wait, a report is already being generated...")
+            st.stop()
+        
+        # Validate input first
+        is_valid, error_message = validate_topic(topic)
+        if not is_valid:
+            st.error(f"❌ {error_message}")
+            st.stop()
+        
         if topic:
-            # Check rate limiting
-            if ENABLE_RATE_LIMITING:
-                current_time = datetime.now()
-                
-                # Check if user has exceeded request limit
-                if st.session_state['request_count'] >= MAX_REQUESTS_PER_SESSION:
-                    st.error(f"⚠️ Rate limit exceeded! You can only make {MAX_REQUESTS_PER_SESSION} requests per session. Please refresh the page to reset.")
-                    st.stop()
-                
-                # Check cooldown period only when making the final request (after 1st request)
-                if st.session_state['request_count'] == 1:  # After 1st request, before 2nd
-                    if st.session_state['last_request_time']:
-                        time_diff = current_time - st.session_state['last_request_time']
-                        if time_diff.total_seconds() < COOLDOWN_MINUTES * 60:
-                            remaining_time = COOLDOWN_MINUTES * 60 - time_diff.total_seconds()
-                            st.error(f"⏰ Please wait {int(remaining_time/60)} minutes and {int(remaining_time%60)} seconds before making your final request.")
-                            st.stop()
-                
-                # Update rate limiting counters
-                st.session_state['request_count'] += 1
-                st.session_state['last_request_time'] = current_time
-            
+            # IMMEDIATELY set processing state to disable button
+            st.session_state['is_processing'] = True
+            # Start the search
             st.session_state['generate_report'] = True
+            # Reset completion flag to allow generation
+            st.session_state['report_completed'] = False
+            # Force rerun to update UI immediately
+            st.rerun()
         else:
             st.error("Please enter a research topic first!")
 
@@ -287,17 +307,44 @@ if st.session_state.get('generate_report') and topic:
     st.markdown('<div class="report-container">', unsafe_allow_html=True)
     st.markdown("### 🔄 Generating Your Research Report")
     
-    progress_bar = st.progress(0, text="Starting research...")
+    progress_bar = st.progress(UI_CONFIG["PROGRESS_STEPS"][0], text="Starting research...")
     
-    with st.spinner("🤖 AI is working on your research report..."):
-        progress_bar.progress(50, text="Generating report...")
-        raw_response, structured_response = generate_report(topic, model_choice)
-        progress_bar.progress(100, text="✅ Report generated!")
-    
-    st.success("🎉 Research report generated successfully!")
+    try:
+        with st.spinner("🤖 AI is working on your research report..."):
+            progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][1], text="Generating report...")
+            # Convert display name to internal format
+            model_internal = "openai" if model_choice == "OpenAI GPT" else "google_genai"
+            raw_response, structured_response = generate_report(topic, model_internal)
+            progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][2], text="✅ Report generated!")
+        st.success("🎉 Research report generated successfully!")
+
+        # Set completion flag after successful generation
+    except Exception as e:
+        st.error(f"❌ Error during report generation: {str(e)}")
+        st.info("💡 **Troubleshooting Tips:**\n- Try switching to a different AI model\n- Check your internet connection\n- Wait a few minutes and try again\n- Ensure your topic is clear and specific")
+    finally:
+        # Always reset processing state, regardless of success or failure
+        st.session_state['is_processing'] = False
+        change_state()
+        
+        # Update the button container to enable the button
+        button_container.button("🚀 Generate Research Report", type="primary", use_container_width=True, disabled=False)
+        
     
     # Store in session state
     try:
+        # Check if structured_response is None or invalid
+        if structured_response is None:
+            st.error("❌ Failed to generate structured report. Please try again.")
+            st.session_state['generate_report'] = False
+            st.stop()
+        
+        # Check if it's a valid ResearchResponse object
+        if not hasattr(structured_response, 'topic'):
+            st.error("❌ Invalid response format. Please try again.")
+            st.session_state['generate_report'] = False
+            st.stop()
+        
         md_content = f"# {structured_response.topic}\n\n"
         md_content += f"## Abstract\n{structured_response.abstract}\n\n"
         md_content += f"## Introduction\n{structured_response.introduction}\n\n"
@@ -307,12 +354,17 @@ if st.session_state.get('generate_report') and topic:
         md_content += f"## Keywords\n" + ", ".join(structured_response.keywords) + "\n\n"
         md_content += f"## Confidence Score\n{structured_response.confidence_score}\n\n"
         md_content += f"## Last Updated\n{structured_response.last_updated}\n\n"
+        
+        st.session_state['md_content'] = md_content
+        st.session_state['edited_md'] = md_content
+
     except Exception as e:
-        st.error(f"Error parsing response: {e}")
-        md_content = raw_response.get("output", "")
+        st.error(f"❌ Error parsing response: {str(e)}")
+        st.info("💡 **Troubleshooting Tips:**\n- Try switching to a different AI model\n- Check your internet connection\n- Wait a few minutes and try again\n- Ensure your topic is clear and specific")
+        st.session_state['generate_report'] = False
+        st.stop()
     
-    st.session_state['md_content'] = md_content
-    st.session_state['edited_md'] = md_content
+    # Reset generation flag
     st.session_state['generate_report'] = False
     
     st.markdown('</div>', unsafe_allow_html=True)
@@ -324,16 +376,16 @@ if st.session_state.get('md_content'):
     # 1. Show Preview First
     st.markdown("### 📄 Report Preview")
     st.markdown(st.session_state.get('edited_md', st.session_state.get('md_content', "")), unsafe_allow_html=True)
-    
+
     # Add model attribution in UI only
-    model_display_name = "OpenAI GPT" if model_choice == "openai" else "Google Gemini"
+    model_display_name = model_choice
     st.markdown(f"---\n*Generated using {model_display_name}*", unsafe_allow_html=True)
 
     # 2. Edit Option
     st.markdown("### ✏️ Edit Report")
     edited_md = st.text_area(
         "Edit your research report:",
-        height=400,
+        height=UI_CONFIG["TEXT_AREA_HEIGHT"],
         key="edited_md",
         help="You can edit the generated report before downloading"
     )
@@ -342,7 +394,19 @@ if st.session_state.get('md_content'):
     st.markdown("### 📥 Download Your Research Report")
     
     def get_download_filename():
-        safe_topic = topic.strip().replace(" ", "_") if topic else "research_report"
+        """Generate a safe filename for download"""
+        import re
+        if not topic:
+            return "research_report_output.md"
+        
+        # Remove special characters and replace spaces with underscores
+        safe_topic = re.sub(r'[^a-zA-Z0-9\s]', '', topic.strip())
+        safe_topic = re.sub(r'\s+', '_', safe_topic)
+        
+        # Limit length to prevent overly long filenames
+        if len(safe_topic) > 50:
+            safe_topic = safe_topic[:50]
+        
         return f"{safe_topic}_output.md"
     
     st.download_button(
@@ -362,3 +426,6 @@ st.markdown("""
     <p>🤖 AI Research Buddy | Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
+
+# Clean up session state
+cleanup_session_state()
