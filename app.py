@@ -3,13 +3,17 @@ from datetime import datetime, timedelta
 
 # Import your backend logic
 from main import ResearchResponse, generate_report
-from config import EXAMPLE_TOPICS, UI_CONFIG
+from config import EXAMPLE_TOPICS, UI_CONFIG, RATE_LIMIT_CONFIG
 
 # Initialize session state
 if 'is_processing' not in st.session_state:
     st.session_state['is_processing'] = False
 if 'report_completed' not in st.session_state:
     st.session_state['report_completed'] = False
+if 'requests_remaining' not in st.session_state:
+    st.session_state['requests_remaining'] = RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]
+if 'cooldown_start_time' not in st.session_state:
+    st.session_state['cooldown_start_time'] = None
 
 # Input validation function
 def validate_topic(topic: str) -> tuple[bool, str]:
@@ -32,11 +36,46 @@ def validate_topic(topic: str) -> tuple[bool, str]:
     
     return True, ""
 
+# Rate limiting functions
+def check_rate_limit():
+    """Check if user can make a request based on session limits"""
+    if not RATE_LIMIT_CONFIG["ENABLE_RATE_LIMITING"]:
+        return True, None
+    
+    # Check if in cooldown period
+    if st.session_state.get('cooldown_start_time'):
+        cooldown_end = st.session_state['cooldown_start_time'] + timedelta(minutes=RATE_LIMIT_CONFIG["COOLDOWN_MINUTES"])
+        if datetime.now() < cooldown_end:
+            remaining_time = cooldown_end - datetime.now()
+            minutes = int(remaining_time.total_seconds() // 60)
+            seconds = int(remaining_time.total_seconds() % 60)
+            return False, f"⏰ Cooldown active - {minutes}m {seconds}s remaining"
+        else:
+            # Cooldown expired, reset
+            st.session_state['requests_remaining'] = RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]
+            st.session_state['cooldown_start_time'] = None
+    
+    # Check if requests remaining
+    if st.session_state['requests_remaining'] <= 0:
+        # Start cooldown
+        st.session_state['cooldown_start_time'] = datetime.now()
+        return False, f"Rate limit exceeded! You can only make {RATE_LIMIT_CONFIG['MAX_REQUESTS_PER_SESSION']} requests per session. Come back after the {RATE_LIMIT_CONFIG['COOLDOWN_MINUTES']}-minute cooldown."
+    
+    return True, None
+
+def decrement_request_count():
+    """Decrement the request count after successful generation"""
+    st.session_state['requests_remaining'] -= 1
+    
+    # Start cooldown immediately when requests reach 0
+    if st.session_state['requests_remaining'] <= 0:
+        st.session_state['cooldown_start_time'] = datetime.now()
+
 # Session state cleanup function
 def cleanup_session_state():
     """Clean up old session state data to prevent memory leaks"""
     # Keep only essential session state variables
-    essential_keys = ['selected_topic', 'is_processing', 'report_completed']
+    essential_keys = ['selected_topic', 'is_processing', 'report_completed', 'requests_remaining', 'cooldown_start_time']
     keys_to_remove = []
     
     for key in st.session_state.keys():
@@ -213,13 +252,20 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Choose AI Model:",
-        ["OpenAI GPT", "Google Gemini"],
+        ["gpt-4o-mini", "gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
         key="model_choice"
     )
     
-    # Show processing status if currently generating
-    if st.session_state.get('is_processing', False):
-        st.info("🔄 Generating report...")
+    # Rate limiting display
+    if RATE_LIMIT_CONFIG["ENABLE_RATE_LIMITING"]:
+        remaining = st.session_state.get('requests_remaining', RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"])
+        st.metric("📊 Remaining Requests", remaining)
+        
+        # Show simple message when requests are exhausted
+        if st.session_state.get('requests_remaining', RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]) <= 0:
+            st.warning("⏰ Come back after 10 minutes to generate more reports!")
+    
+
     
     # Tips section
     st.markdown("### 💡 Tips")
@@ -270,11 +316,11 @@ button_container = st.empty()
 
 col1, col2, col3 = st.columns(UI_CONFIG["COLUMN_LAYOUT"])
 with col2:
-    # Disable button if currently processing
-    button_disabled = st.session_state.get('is_processing', False)
+    # Disable button if currently processing or no requests remaining
+    button_disabled = st.session_state.get('is_processing', False) or st.session_state.get('requests_remaining', RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]) <= 0
     
     # Show different button text based on state
-    button_text = "⏳ Generating Report..." if button_disabled else "🚀 Generate Research Report"
+    button_text = "⏳ Generating Report..." if st.session_state.get('is_processing', False) else "🚀 Generate Research Report"
     
     
     # Render the button in the container
@@ -284,6 +330,12 @@ with col2:
             st.warning("⏳ Please wait, a report is already being generated...")
             st.stop()
         
+        # Check rate limiting
+        can_proceed, rate_limit_message = check_rate_limit()
+        if not can_proceed:
+            st.error(f"❌ {rate_limit_message}")
+            st.stop()
+        
         # Validate input first
         is_valid, error_message = validate_topic(topic)
         if not is_valid:
@@ -291,6 +343,8 @@ with col2:
             st.stop()
         
         if topic:
+            # IMMEDIATELY decrement request count when starting generation
+            decrement_request_count()
             # IMMEDIATELY set processing state to disable button
             st.session_state['is_processing'] = True
             # Start the search
@@ -309,11 +363,27 @@ if st.session_state.get('generate_report') and topic:
     
     progress_bar = st.progress(UI_CONFIG["PROGRESS_STEPS"][0], text="Starting research...")
     
+    # Initialize structured_response to None
+    structured_response = None
+    
     try:
         with st.spinner("🤖 AI is working on your research report..."):
             progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][1], text="Generating report...")
             # Convert display name to internal format
-            model_internal = "openai" if model_choice == "OpenAI GPT" else "google_genai"
+            if model_choice == "gpt-4o-mini":
+                model_internal = "openai"
+            elif model_choice == "gemini-1.5-flash":
+                model_internal = "google_genai"
+            elif model_choice == "gemini-2.0-flash":
+                model_internal = "google_genai_2_0"
+            elif model_choice == "gemini-2.0-flash-lite":
+                model_internal = "google_genai_2_0_lite"
+            elif model_choice == "gemini-2.5-flash":
+                model_internal = "google_genai_2_5"
+            elif model_choice == "gemini-2.5-flash-lite":
+                model_internal = "google_genai_2_5_lite"
+            else:
+                model_internal = "openai"  # fallback
             raw_response, structured_response = generate_report(topic, model_internal)
             progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][2], text="✅ Report generated!")
         st.success("🎉 Research report generated successfully!")
@@ -327,8 +397,12 @@ if st.session_state.get('generate_report') and topic:
         st.session_state['is_processing'] = False
         change_state()
         
-        # Update the button container to enable the button
-        button_container.button("🚀 Generate Research Report", type="primary", use_container_width=True, disabled=False)
+        # Update the button container to reflect current state (including decremented count)
+        remaining_requests = st.session_state.get('requests_remaining', RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"])
+        button_disabled = remaining_requests <= 0
+        
+        # Update the button container with the correct state
+        button_container.button("🚀 Generate Research Report", type="primary", use_container_width=True, disabled=button_disabled)
         
     
     # Store in session state
