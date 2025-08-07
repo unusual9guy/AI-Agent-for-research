@@ -67,12 +67,12 @@ def set_llm(type : str):
             model="gemini-2.0-flash-lite",
             temperature=0,
         )
-    elif type == "google_genai_2_5_lite":
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-lite",
-            temperature=0,
-        )
+    # elif type == "google_genai_2_5_lite":
+    #     from langchain_google_genai import ChatGoogleGenerativeAI
+    #     llm = ChatGoogleGenerativeAI(
+    #         model="gemini-2.5-flash-lite",
+    #         temperature=0,
+    #     )
     # for future use
     # elif type == "google_genai_2_5":
     #     from langchain_google_genai import ChatGoogleGenerativeAI

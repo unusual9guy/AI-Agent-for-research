@@ -252,7 +252,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Choose AI Model:",
-        ["GPT-4o-mini", "Gemini-1.5-flash", "Gemini-2.0-flash", "Gemini-2.0-flash-lite", "Gemini-2.5-flash-lite"],
+        ["GPT-4o-mini", "Gemini-1.5-flash", "Gemini-2.0-flash", "Gemini-2.0-flash-lite"],  # "Gemini-2.5-flash-lite" commented out due to parsing issues
         key="model_choice"
     )
     
@@ -375,8 +375,8 @@ if st.session_state.get('generate_report') and topic:
                 model_internal = "google_genai_2_0"
             elif model_choice == "Gemini-2.0-flash-lite":
                 model_internal = "google_genai_2_0_lite"
-            elif model_choice == "Gemini-2.5-flash-lite":
-                model_internal = "google_genai_2_5_lite"
+            # elif model_choice == "Gemini-2.5-flash-lite":
+            #     model_internal = "google_genai_2_5_lite"
             else:
                 model_internal = "openai"  # fallback
             raw_response, structured_response = generate_report(topic, model_internal)
