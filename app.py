@@ -1,4 +1,5 @@
 import streamlit as st
+import re
 from datetime import datetime, timedelta
 
 # Import your backend logic
@@ -366,17 +367,15 @@ if st.session_state.get('generate_report') and topic:
     try:
         with st.spinner("🤖 AI is working on your research report..."):
             progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][1], text="Generating report...")
-            # Convert display name to internal format
+            # Map UI selection to main.set_llm identifiers
             if model_choice == "GPT-4o-mini":
                 model_internal = "openai"
             elif model_choice == "Gemini-1.5-flash":
-                model_internal = "google_genai"
+                model_internal = "gemini-1.5-flash"
             elif model_choice == "Gemini-2.0-flash":
-                model_internal = "google_genai_2_0"
+                model_internal = "gemini-2.0-flash"
             elif model_choice == "Gemini-2.0-flash-lite":
-                model_internal = "google_genai_2_0_lite"
-            # elif model_choice == "Gemini-2.5-flash-lite":
-            #     model_internal = "google_genai_2_5_lite"
+                model_internal = "gemini-2.0-flash-lite"
             else:
                 model_internal = "openai"  # fallback
             raw_response, structured_response = generate_report(topic, model_internal)
@@ -422,10 +421,21 @@ if st.session_state.get('generate_report') and topic:
             st.session_state['generate_report'] = False
             st.stop()
         
+        # Clean duplicate sections from detailed_research (remove any inlined Conclusion/Citations)
+        cleaned_detailed = structured_response.detailed_research or ""
+        try:
+            # Remove any Citations/References/Bibliography sections inside detailed
+            cleaned_detailed = re.sub(r"(?:^|\n)#{1,6}\s*(Citations|References|Bibliography)\b[\s\S]*?(?=(?:\n#{1,6}\s)|\Z)", "", cleaned_detailed, flags=re.IGNORECASE)
+            # Remove any Conclusion sections inside detailed
+            cleaned_detailed = re.sub(r"(?:^|\n)#{1,6}\s*Conclusion\b[\s\S]*?(?=(?:\n#{1,6}\s)|\Z)", "", cleaned_detailed, flags=re.IGNORECASE)
+            cleaned_detailed = cleaned_detailed.strip()
+        except Exception:
+            pass
+
         md_content = f"# {structured_response.topic}\n\n"
         md_content += f"## Abstract\n{structured_response.abstract}\n\n"
         md_content += f"## Introduction\n{structured_response.introduction}\n\n"
-        md_content += f"## Detailed Research\n{structured_response.detailed_research}\n\n"
+        md_content += f"## Detailed Research\n{cleaned_detailed}\n\n"
         md_content += f"## Conclusion\n{structured_response.conclusion}\n\n"
         md_content += f"## Citations\n" + "\n".join(f"- {c}" for c in structured_response.citations) + "\n\n"
         md_content += f"## Keywords\n" + ", ".join(structured_response.keywords) + "\n\n"
