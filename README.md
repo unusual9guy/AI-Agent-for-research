@@ -2,6 +2,10 @@
 
 An intelligent AI research assistant built with LangChain and Streamlit that can conduct comprehensive research on any topic and generate professional academic-style reports. The application features a modern, user-friendly web interface with multiple LLM providers and advanced research capabilities.
 
+## 🌐 Live Demo
+
+You can try the app here: `https://ai-agent-for-research.onrender.com`
+
 ## ✨ Features
 
 - 🌐 **Modern Web Interface**: Beautiful Streamlit-based UI with dark theme and gradient styling
