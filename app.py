@@ -253,7 +253,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Choose AI Model:",
-        ["GPT-4o-mini", "Gemini-1.5-flash", "Gemini-2.0-flash", "Gemini-2.0-flash-lite"],  # "Gemini-2.5-flash-lite" commented out due to parsing issues
+        ["Gemini-2.0-flash", "Gemini-2.0-flash-lite", "GPT-4o-mini", "Gemini-1.5-flash"],  # order per request
         key="model_choice"
     )
     
