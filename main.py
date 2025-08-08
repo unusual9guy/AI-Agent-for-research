@@ -4,13 +4,12 @@ from pydantic import BaseModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
-from tools import search_tool, wiki_tool, save_tool, verify_image_tool
+from tools import TOOLS, save_to_txt
 from typing import List
 from cl_ui import *
 
 # loading the env file 
 load_dotenv()
-
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 """
@@ -36,11 +35,10 @@ class ResearchResponse(BaseModel):
 
 # Function to set up the LLM based on the type provided
 def set_llm(type : str):
-    #Currently groq dosen't support external tools usage in the agent - waiting for the update
     # if type == "groq": 
     #     from langchain_groq import ChatGroq
     #     llm = ChatGroq(
-    #         model="llama3-70b-8192",
+    #         model="llama-3.1-8b-instant",
     #         temperature=0, 
     #         )  
     #Currently ollama dosen't support external tools usage in the agent - waiting for the update
@@ -49,36 +47,38 @@ def set_llm(type : str):
     #     llm = ChatOllama(
     #         model="llama3.2:3b", 
     #         temperature=0)
-    if type == "google_genai":
+    if type == "gemini-1.5-flash":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash",
             temperature=0,
         )
-    elif type == "google_genai_2_0":
+    elif type == "gemini-2.0-flash":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             temperature=0,
         )
-    elif type == "google_genai_2_0_lite":
+    elif type == "gemini-2.0-flash-lite":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash-lite",
             temperature=0,
         )
-    # elif type == "google_genai_2_5_lite":
+    # elif type == "gemini-2.5-flash-lite":
     #     from langchain_google_genai import ChatGoogleGenerativeAI
     #     llm = ChatGoogleGenerativeAI(
     #         model="gemini-2.5-flash-lite",
     #         temperature=0,
+    #         transport="rest",
     #     )
-    # for future use
-    # elif type == "google_genai_2_5":
+    # for future use- currently streaming is unstable
+    # elif type == "gemini-2.5-flash":
     #     from langchain_google_genai import ChatGoogleGenerativeAI
     #     llm = ChatGoogleGenerativeAI(
     #         model="gemini-2.5-flash",
     #         temperature=0,
+    #         transport="rest",
     #     )
     elif type == "openai":
         from langchain_openai import ChatOpenAI
@@ -90,10 +90,8 @@ def set_llm(type : str):
 
 def generate_report(query, model_choice):
     llm = set_llm(model_choice)
-    from langchain_core.output_parsers import PydanticOutputParser
-    from langchain_core.prompts import ChatPromptTemplate
-    from langchain.agents import create_tool_calling_agent, AgentExecutor
-    from tools import search_tool, wiki_tool, save_tool
+    if llm is None:
+        raise ValueError(f"LLM initialization failed for type '{model_choice}'.")
     parser = PydanticOutputParser(pydantic_object=ResearchResponse)
     prompt_template = ChatPromptTemplate.from_messages([
         (
@@ -127,7 +125,7 @@ def generate_report(query, model_choice):
             - topic: the research topic (this will be used to generate the filename)
 
             IMPORTANT: You MUST return a COMPLETE JSON response with ALL fields including topic, abstract, introduction, detailed_research, conclusion, citations, sources, tools_used, keywords, page_count, confidence_score, and last_updated. DO NOT omit any of these fields.
-
+            DO NOT HALLUCINATE ANY INFORMATION OR THE STRUCTURE OF THE REPORT.
             Return output **strictly following** this structured pydantic format:
             \n{{format_instructions}}""",
         ),
@@ -135,13 +133,13 @@ def generate_report(query, model_choice):
         ("human", "{query}"),
         ("placeholder", "{agent_scratchpad}"),
     ]).partial(format_instructions=parser.get_format_instructions())
-    tools = [search_tool, wiki_tool, save_tool]
+
     agent = create_tool_calling_agent(
         llm=llm,
         prompt=prompt_template,
-        tools=tools,
+        tools=TOOLS
     )
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
     raw_response = agent_executor.invoke({"query": query})
     try:
         structured_response = parser.parse(raw_response.get("output"))
@@ -155,8 +153,8 @@ def generate_report(query, model_choice):
             import json
             output_text = raw_response.get("output", "")
             
-            # Look for JSON pattern in the response
-            json_match = re.search(r'\{.*\}', output_text, re.DOTALL)
+            # Look for JSON pattern in the response (non-greedy)
+            json_match = re.search(r'\{.*?\}', output_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
                 # Try to parse the extracted JSON
@@ -181,7 +179,7 @@ def main():
     if len(sys.argv) < 2:
         print("Error: LLM type not provided.")
         print("Usage: python main.py <llm_type>")
-        print("Available types: groq, ollama, google_genai, openai")
+        print("Available types: openai,gemini-1.5-flash, gemini-2.0-flash, gemini-2.0-flash-lite") #groq #"gemini-2.5-flash", "gemini-2.5-flash-lite"
         sys.exit(1)
 
 
@@ -189,22 +187,61 @@ def main():
     type = sys.argv[1].lower()
 
     # checking if the type is valid
-    if type not in ["google_genai", "openai"]: # "groq", "ollama",
-        print(f"Invalid LLM type: {type}. Available types are: google_genai, openai")
+    if type not in ["gemini-1.5-flash", "openai", "gemini-2.0-flash", "gemini-2.0-flash-lite"]: #"ollama", #groq, "gemini-2.5-flash", "gemini-2.5-flash-lite"
+        print(f"Invalid LLM type: {type}. Available types are: openai, gemini-1.5-flash, gemini-2.0-flash, gemini-2.0-flash-lite") #groq, "gemini-2.5-flash", "gemini-2.5-flash-lite"
         sys.exit(1)
     
     print(f"Using LLM type: {type}")
     # set up the selected LLM 
-    query = get_user_input() + ", save to a file"
+    query = get_user_input() 
     print_progress()
 
     raw_response, structured_response = generate_report(query, type)
     print(f"Raw response ------> {raw_response}")
 
     print("structured response ------>")
-    try : 
-        print_result_ui(structured_response)
-    except Exception as e : 
+    try:
+        if structured_response is not None:
+            print_result_ui(structured_response)
+            # Auto-save fallback: if the agent didn't explicitly save, persist the report ourselves
+            output_text = raw_response.get("output", "") if isinstance(raw_response, dict) else ""
+            if not (isinstance(output_text, str) and "successfully saved to" in output_text):
+                try:
+                    # Build markdown content from the structured response
+                    citations_md = "\n".join(
+                        f"{idx + 1}. {cite}" for idx, cite in enumerate(structured_response.citations or [])
+                    )
+                    sources_md = "\n".join(
+                        f" - {src}" for src in (structured_response.sources or [])
+                    )
+                    tools_md = ", ".join(structured_response.tools_used or [])
+                    keywords_md = ", ".join(structured_response.keywords or [])
+
+                    markdown = (
+                        f"## {structured_response.topic}\n\n"
+                        f"### Abstract\n{structured_response.abstract}\n\n"
+                        f"### Introduction\n{structured_response.introduction}\n\n"
+                        f"### Detailed Research\n{structured_response.detailed_research}\n\n"
+                        f"### Conclusion\n{structured_response.conclusion}\n\n"
+                        f"### Citations\n{citations_md}\n\n"
+                        f"### Sources\n{sources_md}\n\n"
+                        f"### Tools Used\n{tools_md}\n\n"
+                        f"### Keywords\n{keywords_md}\n\n"
+                        f"### Page Count\n{structured_response.page_count}\n\n"
+                        f"### Confidence Score\n{structured_response.confidence_score}\n\n"
+                        f"### Last Updated\n{structured_response.last_updated}\n"
+                    )
+                    msg = save_to_txt(data=markdown, topic=structured_response.topic)
+                    print(msg)
+                except Exception as save_err:
+                    print(f"Auto-save failed: {save_err}")
+        else:
+            output_text = raw_response.get("output", "") if isinstance(raw_response, dict) else ""
+            if isinstance(output_text, str) and "successfully saved to" in output_text:
+                print(output_text)
+            else:
+                print("No structured JSON returned. If you saw a save confirmation above, the file has been saved.")
+    except Exception as e:
         print("Error parsing response", e, "Raw Response -->", raw_response)
 
 if __name__ == "__main__":
