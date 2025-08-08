@@ -106,4 +106,4 @@ verify_image_tool = StructuredTool.from_function(
 )
 
 # ----------------------------- TOOL LIST -----------------------------
-TOOLS = [search_tool, wiki_tool, save_tool, verify_image_tool]
+TOOLS = [search_tool, wiki_tool, save_tool] # verify_image_tool
