@@ -426,8 +426,16 @@ if st.session_state.get('generate_report') and topic:
         try:
             # Remove any Citations/References/Bibliography sections inside detailed
             cleaned_detailed = re.sub(r"(?:^|\n)#{1,6}\s*(Citations|References|Bibliography)\b[\s\S]*?(?=(?:\n#{1,6}\s)|\Z)", "", cleaned_detailed, flags=re.IGNORECASE)
+            # Also handle plain-text labels like "Citations:" without markdown headers
+            cleaned_detailed = re.sub(
+                r"(?:^|\n)\s*(?:Citations|References|Bibliography)\s*:\s*[\s\S]*?(?=(?:\n\s*(?:#{1,6}\s|\d+(?:\.\d+)*\.\s|Conclusion\b|Keywords\b))|\Z)",
+                "",
+                cleaned_detailed,
+                flags=re.IGNORECASE,
+            )
             # Remove any Conclusion sections inside detailed
             cleaned_detailed = re.sub(r"(?:^|\n)#{1,6}\s*Conclusion\b[\s\S]*?(?=(?:\n#{1,6}\s)|\Z)", "", cleaned_detailed, flags=re.IGNORECASE)
+            cleaned_detailed = re.sub(r"(?:^|\n)\s*Conclusion\s*:\s*[\s\S]*?(?=(?:\n\s*(?:#{1,6}\s|\d+(?:\.\d+)*\.\s|Citations\b|Keywords\b))|\Z)", "", cleaned_detailed, flags=re.IGNORECASE)
             cleaned_detailed = cleaned_detailed.strip()
         except Exception:
             pass
