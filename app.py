@@ -137,6 +137,23 @@ st.markdown("""
         transition: all 0.3s ease;
     }
     
+    /* Ensure uniform sizing for example topic buttons only */
+    #example-buttons .stButton > button {
+        width: 100% !important;
+        height: 96px !important;
+        min-height: 96px !important;
+        max-height: 96px !important;
+        white-space: normal !important;
+        word-break: break-word;
+        line-height: 1.25;
+        padding: 0.75rem 1rem;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
@@ -282,14 +299,24 @@ st.markdown("### 🔍 Research Topic")
 
 # Example topic buttons - Responsive layout
 st.markdown("**💡 Example Topics:**")
-example_topics = EXAMPLE_TOPICS
+example_topics = [
+    "Rise of AI startups in Silicon Valley and their impact on the economy",
+    "Impact of Chinese EV brands on the European automobile industry",
+    "AI-driven optimization of renewable energy grids and storage",
+    "Ethical implications of generative AI in education",
+    "Quantum computing’s near-term applications in drug discovery",
+    "The role of AI in cybersecurity threat detection and response",
+]
+
+# Scope styles to this container so only example buttons are affected
+st.markdown('<div id="example-buttons">', unsafe_allow_html=True)
 
 # Use responsive columns based on screen size
 if len(example_topics) <= 3:
     cols = st.columns(len(example_topics))
     for i, example in enumerate(example_topics):
         with cols[i]:
-            if st.button(f"💡 {example}", key=f"example_{i}"):
+            if st.button(f"💡 {example}", key=f"example_{i}", use_container_width=True):
                 st.session_state['selected_topic'] = example
                 st.rerun()
 else:
@@ -297,9 +324,11 @@ else:
     cols = st.columns(3)
     for i, example in enumerate(example_topics):
         with cols[i % 3]:
-            if st.button(f"💡 {example}", key=f"example_{i}"):
+            if st.button(f"💡 {example}", key=f"example_{i}", use_container_width=True):
                 st.session_state['selected_topic'] = example
                 st.rerun()
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Search bar 
 topic = st.text_input(
