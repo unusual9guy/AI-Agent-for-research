@@ -120,14 +120,6 @@ def generate_report(query, model_choice):
             - Include extracted keywords and a confidence score
             - Ensure all content is well-researched and properly cited
 
-            Strict Sectioning Rules:
-            - The detailed_research field MUST NOT include sections or headings titled "Citations", "References", "Bibliography", "Conclusion", "Keywords", or "Sources".
-            - Full citation entries MUST appear ONLY in the citations list. In the body, use inline numeric markers like [1], [2] if needed, but DO NOT include full reference strings in detailed_research or introduction.
-            - Do NOT duplicate content across sections. Each field (abstract, introduction, detailed_research, conclusion, citations, sources, tools_used, keywords) MUST contain unique, non-overlapping content.
-
-            Output Formatting Constraints:
-            - Return PURE JSON ONLY with no surrounding text, no markdown, and NO code fences (e.g., no ```json ... ```). The response must be a single JSON object matching the schema.
-
             When using the save_text_to_file tool, you MUST provide two arguments:
             - data: the markdown content to save
             - topic: the research topic (this will be used to generate the filename)
