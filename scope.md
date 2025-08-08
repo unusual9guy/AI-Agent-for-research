@@ -1,7 +1,7 @@
 # Future Enhancements: Large Model Response Handling
 
 ## Overview
-This document outlines planned enhancements to handle larger, more detailed responses from advanced AI models like Gemini 2.5 Flash, Gemini 2.5 Flash Lite and future models (Gemini 2.5 Pro, etc.).
+This document outlines planned enhancements to handle larger, more detailed responses from advanced AI models like Gemini 2.5 Flash, Gemini 2.5 Flash Lite and future models (Gemini 2.5 Pro, etc.), as well as upcoming OpenAI GPT-5 series models.
 
 ## Current Issue
 - **Terminal execution**: Works fine - agent generates and saves detailed reports successfully
@@ -149,10 +149,29 @@ def get_parsing_strategy(model_type):
 
 ## Future Considerations
 - **Gemini 2.5 Pro** integration when available
+- **OpenAI GPT-5 series** integration (e.g., GPT-5, GPT-5-mini, GPT-5.1 variants) with structured-output compatibility
 - **Other large language models** (Claude 3.5 Sonnet, GPT-4 Turbo)
 - **Real-time parsing** for streaming responses
 - **Caching mechanisms** for parsed responses
 - **User preferences** for response detail levels
+
+---
+
+## Planned Model & Feature Integrations (Upcoming)
+
+### Model Integrations
+- Gemini 2.5 family: Flash, Flash Lite, and Pro, using REST transport fallback where needed; maintain compatibility with existing 1.5/2.0 models.
+- OpenAI GPT-5 series: planned support for GPT-5 family with structured output and long-context handling, including graceful degradation when responses exceed parser thresholds.
+
+### Rich Output Capabilities
+- Mathematical formulas: allow LaTeX-style math (`$inline$`, `$$block$$`) in generated content; render in Streamlit via MathJax and preserve in markdown/PDF exports.
+- Images: support embedding images in reports (remote URLs and optional local assets). Validate with an image verification utility and include alt text and captions.
+- Custom graphs: enable chart/table generation (matplotlib/Plotly) from extracted data; save to `outputs/` as PNG/SVG and embed links in the markdown; provide interactive visualization in Streamlit where applicable.
+
+### Success Criteria Additions
+- 2.5 models and GPT-5 series selectable in UI and functional end-to-end.
+- Math rendering displays correctly in Streamlit and persists in exported files.
+- Images and generated graphs are embedded/linked correctly and stored alongside the report.
 
 ---
 *Last Updated: 2024-01-27*
