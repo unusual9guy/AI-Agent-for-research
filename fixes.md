@@ -109,10 +109,10 @@ This plan addresses the issues identified during the review and organizes them i
 ---
 
 ## Implementation Order Checklist
-- [ ] 1 Harden JSON extraction
+- [x] 1 Harden JSON extraction
 - [ ] 2 Prefer structured output where available
-- [ ] 3 Secure report rendering (no unsafe HTML in content)
-- [ ] 4 Add developer diagnostics toggle
+- [x] 3 Secure report rendering (no unsafe HTML in content)
+- [x] 4 Add developer diagnostics toggle
 - [ ] 5 Use `EXAMPLE_TOPICS` from config
 - [ ] 6 Wire `API_CONFIG` into `set_llm` and centralize mapping
 - [ ] 7 Update README model list and CLI examples
