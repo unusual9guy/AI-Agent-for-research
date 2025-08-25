@@ -7,6 +7,8 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from tools import TOOLS, save_to_txt
 from typing import List
 from cl_ui import *
+import re
+import json
 
 # loading the env file 
 load_dotenv()
@@ -31,6 +33,87 @@ class ResearchResponse(BaseModel):
     page_count: int  
     confidence_score: float  
     last_updated: str  
+
+
+# ------------------------ Parsing helpers ------------------------
+def _get_output_text(raw_response) -> str:
+    """Best-effort extraction of text from a LangChain agent response."""
+    try:
+        if isinstance(raw_response, dict):
+            for key in ["output", "output_text", "text", "final_output"]:
+                if key in raw_response and isinstance(raw_response[key], str):
+                    return raw_response[key]
+            # Fallback to string of dict
+            return str(raw_response)
+        return str(raw_response)
+    except Exception:
+        return str(raw_response)
+
+
+def _extract_json_from_code_fences(text: str) -> str | None:
+    """Extract JSON from ```json ... ``` or generic ``` ... ``` fences."""
+    # Prefer explicit json fences
+    m = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", text, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    # Fallback: any fenced block
+    m = re.search(r"```\s*(\{[\s\S]*?\})\s*```", text)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _extract_brace_balanced_json(text: str) -> str | None:
+    """Scan from the end to find the last balanced JSON object using brace counting."""
+    if not text:
+        return None
+    end = text.rfind('}')
+    while end != -1:
+        depth = 0
+        start = None
+        for i in range(end, -1, -1):
+            ch = text[i]
+            if ch == '}':
+                depth += 1
+            elif ch == '{':
+                depth -= 1
+                if depth == 0:
+                    start = i
+                    break
+        if start is not None:
+            candidate = text[start:end+1]
+            return candidate
+        end = text.rfind('}', 0, end)
+    return None
+
+
+def _try_parse_json_candidates(text: str) -> dict | None:
+    """Try multiple strategies to parse JSON from text, returning a dict if successful."""
+    if not isinstance(text, str) or not text:
+        return None
+    # Strategy 1: code fences
+    candidate = _extract_json_from_code_fences(text)
+    if candidate:
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+    # Strategy 2: brace-balanced extraction near the end
+    candidate = _extract_brace_balanced_json(text)
+    if candidate:
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+    # Strategy 3: last-resort greedy search (can still fail on nested braces)
+    m = re.search(r"\{[\s\S]*\}", text)
+    if m:
+        candidate = m.group(0)
+        try:
+            return json.loads(candidate)
+        except Exception:
+            return None
+    return None
 
 
 # Function to set up the LLM based on the type provided
@@ -142,26 +225,23 @@ def generate_report(query, model_choice):
     agent_executor = AgentExecutor(agent=agent, tools=TOOLS, verbose=True)
     raw_response = agent_executor.invoke({"query": query})
     try:
-        structured_response = parser.parse(raw_response.get("output"))
+        structured_response = parser.parse(_get_output_text(raw_response))
     except Exception as e:
+        output_text = _get_output_text(raw_response)
         print(f"Parsing error: {str(e)}")
-        print(f"Raw response output: {raw_response.get('output', 'No output found')}")
-        
+        try:
+            print(f"Raw response length: {len(output_text)}")
+            print(f"Raw response (head): {output_text[:500]}")
+            print(f"Raw response (tail): {output_text[-500:]}")
+        except Exception:
+            pass
+
         # Try to extract JSON from the response if it's embedded in text
         try:
-            import re
-            import json
-            output_text = raw_response.get("output", "")
-            
-            # Look for JSON pattern in the response (non-greedy)
-            json_match = re.search(r'\{.*?\}', output_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                # Try to parse the extracted JSON
-                parsed_data = json.loads(json_str)
-                # Create a ResearchResponse object manually
+            parsed_data = _try_parse_json_candidates(output_text)
+            if parsed_data is not None:
                 structured_response = ResearchResponse(**parsed_data)
-                print("Successfully parsed JSON using fallback method")
+                print("Successfully parsed JSON using improved fallback")
             else:
                 structured_response = None
         except Exception as fallback_error:

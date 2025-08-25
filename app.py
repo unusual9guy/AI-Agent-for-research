@@ -433,6 +433,15 @@ if st.session_state.get('generate_report') and topic:
         # Check if structured_response is None or invalid
         if structured_response is None:
             st.error("❌ Failed to generate structured report. Please try again.")
+            # Optional developer diagnostics
+            if UI_CONFIG.get("SHOW_DEBUG"):
+                from main import _get_output_text  # type: ignore
+                try:
+                    raw_text = _get_output_text(raw_response)
+                    with st.expander("Debug: Raw model output"):
+                        st.code((raw_text or "")[0:2000], language="json")
+                except Exception:
+                    pass
             st.info("💡 **Debug Info:** The AI model generated a response, but it couldn't be parsed into the expected format. This might be due to:")
             st.markdown("""
             - **Response too large** - The model generated content that's too big for parsing
@@ -447,6 +456,14 @@ if st.session_state.get('generate_report') and topic:
         # Check if it's a valid ResearchResponse object
         if not hasattr(structured_response, 'topic'):
             st.error("❌ Invalid response format. Please try again.")
+            if UI_CONFIG.get("SHOW_DEBUG"):
+                from main import _get_output_text  # type: ignore
+                try:
+                    raw_text = _get_output_text(raw_response)
+                    with st.expander("Debug: Raw model output"):
+                        st.code((raw_text or "")[0:2000], language="json")
+                except Exception:
+                    pass
             st.session_state['generate_report'] = False
             st.stop()
         
@@ -499,7 +516,8 @@ if st.session_state.get('md_content'):
     
     # 1. Show Preview First
     st.markdown("### 📄 Report Preview")
-    st.markdown(st.session_state.get('edited_md', st.session_state.get('md_content', "")), unsafe_allow_html=True)
+    # Render report markdown safely (no raw HTML execution)
+    st.markdown(st.session_state.get('edited_md', st.session_state.get('md_content', "")), unsafe_allow_html=False)
 
     # Add model attribution in UI only
     model_display_name = model_choice
