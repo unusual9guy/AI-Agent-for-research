@@ -1,6 +1,7 @@
 import streamlit as st
 import re
 from datetime import datetime, timedelta
+import time
 
 # Import your backend logic
 from main import ResearchResponse, generate_report
@@ -331,6 +332,10 @@ topic = st.text_input(
     help="Describe your research topic in detail for better results"
 )
 
+# Place any persisted error immediately below the search bar
+if 'last_error' in st.session_state and st.session_state['last_error']:
+    st.error(st.session_state['last_error'])
+
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Generate Report Button ---
@@ -348,6 +353,8 @@ with col2:
     
     # Render the button in the container
     if button_container.button(button_text, type="primary", use_container_width=True, disabled=button_disabled):
+        # Clear any persisted error on new generation attempt
+        st.session_state['last_error'] = None
         # Check if already processing
         if st.session_state.get('is_processing', False):
             st.warning("⏳ Please wait, a report is already being generated...")
@@ -379,6 +386,10 @@ with col2:
         else:
             st.error("Please enter a research topic first!")
 
+    # When disabled due to limits, show a static cooldown message in main content
+    remaining_requests = st.session_state.get('requests_remaining', RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"])
+    
+
 # --- Report Generation ---
 if st.session_state.get('generate_report') and topic:
     st.markdown('<div class="report-container">', unsafe_allow_html=True)
@@ -397,8 +408,27 @@ if st.session_state.get('generate_report') and topic:
 
         # Set completion flag after successful generation
     except Exception as e:
-        st.error(f"❌ Error during report generation: {str(e)}")
-        st.info("💡 **Troubleshooting Tips:**\n- Try switching to a different AI model\n- Check your internet connection\n- Wait a few minutes and try again\n- Ensure your topic is clear and specific")
+        e_str = str(e)
+        # Build a friendly message for invalid API keys
+        if "api key" in e_str.lower() or "API_KEY" in e_str or "401" in e_str:
+            error_msg = "❌ Your API key is invalid. Please check your API key or use another company's model."
+        else:
+            error_msg = f"❌ Error during report generation: {e_str}"
+        # Refund one request on hard error to avoid unfair consumption
+        try:
+            max_per_session = RATE_LIMIT_CONFIG["MAX_REQUESTS_PER_SESSION"]
+            current_remaining = st.session_state.get('requests_remaining', max_per_session)
+            if current_remaining < max_per_session:
+                st.session_state['requests_remaining'] = current_remaining + 1
+                if st.session_state['requests_remaining'] > 0:
+                    st.session_state['cooldown_start_time'] = None
+        except Exception:
+            pass
+        # Persist the error for display after rerun and refresh the UI to reflect counters
+        st.session_state['last_error'] = error_msg
+        st.session_state['generate_report'] = False
+        st.session_state['is_processing'] = False
+        st.rerun()
     finally:
         # Always reset processing state, regardless of success or failure
         st.session_state['is_processing'] = False
