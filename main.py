@@ -7,6 +7,7 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 from tools import TOOLS, save_to_txt
 from typing import List
 from cl_ui import *
+from config import API_CONFIG
 import re
 import json
 
@@ -130,23 +131,24 @@ def set_llm(type : str):
     #     llm = ChatOllama(
     #         model="llama3.2:3b", 
     #         temperature=0)
+    temperature = API_CONFIG.get("TEMPERATURE", 0.0)
     if type == "gemini-1.5-flash":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash",
-            temperature=0,
+            temperature=temperature,
         )
     elif type == "gemini-2.0-flash":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
-            temperature=0,
+            temperature=temperature,
         )
     elif type == "gemini-2.0-flash-lite":
         from langchain_google_genai import ChatGoogleGenerativeAI
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash-lite",
-            temperature=0,
+            temperature=temperature,
         )
     # elif type == "gemini-2.5-flash-lite":
     #     from langchain_google_genai import ChatGoogleGenerativeAI
@@ -166,8 +168,8 @@ def set_llm(type : str):
     elif type == "openai":
         from langchain_openai import ChatOpenAI
         llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
+            model=API_CONFIG.get("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=temperature,
         )
     return llm
 
