@@ -491,6 +491,8 @@ def generate_report(query, model_choice):
             if so_obj is not None:
                 structured_response = so_obj
                 print("Structured-output second pass succeeded.")
+            else:
+                print("OpenAI structured-output second pass failed.")
         # Structured-output second pass for Gemini
         if structured_response is None and model_choice.startswith("gemini"):
             print("Attempting structured-output second pass with Gemini...")
@@ -499,10 +501,13 @@ def generate_report(query, model_choice):
             if so_obj is not None:
                 structured_response = so_obj
                 print("Gemini structured-output second pass succeeded.")
+            else:
+                print("Gemini structured-output second pass failed; trying chunk scan…")
         # Markdown fallback (last resort) and chunked handling
         if structured_response is None:
             # If extremely large, try chunking to isolate a likely JSON section
             if len(output_text) > 20000:
+                print("Chunk scan: scanning large output for JSON candidates…")
                 for chunk in _chunk_text(output_text, max_len=12000):
                     data = _try_parse_json_candidates(chunk)
                     if data is not None:
@@ -512,12 +517,17 @@ def generate_report(query, model_choice):
                             break
                         except Exception:
                             pass
+                if structured_response is None:
+                    print("Chunk scan did not find a parseable JSON object.")
             # If still None, try markdown fallback
             if structured_response is None:
+                print("Trying markdown fallback…")
                 md_obj = _markdown_fallback(output_text)
                 if md_obj is not None:
                     structured_response = md_obj
                     print("Markdown fallback succeeded.")
+                else:
+                    print("Markdown fallback failed.")
     return raw_response, structured_response
 
 def main():
