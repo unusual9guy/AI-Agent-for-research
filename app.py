@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 # Import your backend logic
 from main import ResearchResponse, generate_report
-from config import EXAMPLE_TOPICS, UI_CONFIG, RATE_LIMIT_CONFIG
+from config import EXAMPLE_TOPICS, UI_CONFIG, RATE_LIMIT_CONFIG, MODEL_OPTIONS_DISPLAY, MODEL_DISPLAY_TO_INTERNAL
 
 # Initialize session state
 if 'is_processing' not in st.session_state:
@@ -270,7 +270,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Choose AI Model:",
-        ["Gemini-2.0-flash", "Gemini-2.0-flash-lite", "GPT-4o-mini", "Gemini-1.5-flash"],  # order per request
+        MODEL_OPTIONS_DISPLAY,
         key="model_choice"
     )
     
@@ -299,14 +299,7 @@ st.markdown("### 🔍 Research Topic")
 
 # Example topic buttons - Responsive layout
 st.markdown("**💡 Example Topics:**")
-example_topics = [
-    "Rise of AI startups in Silicon Valley and their impact on the economy",
-    "Impact of Chinese EV brands on the European automobile industry",
-    "AI-driven optimization of renewable energy grids and storage",
-    "Ethical implications of generative AI in education",
-    "Quantum computing’s near-term applications in drug discovery",
-    "The role of AI in cybersecurity threat detection and response",
-]
+example_topics = EXAMPLE_TOPICS
 
 # Scope styles to this container so only example buttons are affected
 st.markdown('<div id="example-buttons">', unsafe_allow_html=True)
@@ -397,16 +390,7 @@ if st.session_state.get('generate_report') and topic:
         with st.spinner("🤖 AI is working on your research report..."):
             progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][1], text="Generating report...")
             # Map UI selection to main.set_llm identifiers
-            if model_choice == "GPT-4o-mini":
-                model_internal = "openai"
-            elif model_choice == "Gemini-1.5-flash":
-                model_internal = "gemini-1.5-flash"
-            elif model_choice == "Gemini-2.0-flash":
-                model_internal = "gemini-2.0-flash"
-            elif model_choice == "Gemini-2.0-flash-lite":
-                model_internal = "gemini-2.0-flash-lite"
-            else:
-                model_internal = "openai"  # fallback
+            model_internal = MODEL_DISPLAY_TO_INTERNAL.get(model_choice, "openai")
             raw_response, structured_response = generate_report(topic, model_internal)
             progress_bar.progress(UI_CONFIG["PROGRESS_STEPS"][2], text="✅ Report generated!")
         st.success("🎉 Research report generated successfully!")
