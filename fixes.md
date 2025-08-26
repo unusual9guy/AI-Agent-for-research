@@ -73,12 +73,7 @@ This plan addresses the issues identified during the review and organizes them i
      - Either: add `verify_image_tool` to `TOOLS` and mention in the system prompt when images are referenced, or remove from code if not planned.
    - Acceptance: Tool list and prompt are consistent; no dead code.
 
-11) Trim or comment optional dependencies
-   - Files: `requirements.txt`
-   - Actions:
-     - Remove or comment unused libs (e.g., anthropic, groq, ollama, matplotlib, duckduckgo-search) unless they are actively used.
-     - Pin versions where practical for stability.
-   - Acceptance: `pip install -r requirements.txt` succeeds faster; no import errors at runtime.
+<!-- 11) Trim or comment optional dependencies — removed per decision to keep deps for future features -->
 
 ### Phase 5 — Consistency and Sanitization (Medium)
 12) Unify filename sanitization
@@ -127,10 +122,10 @@ This plan addresses the issues identified during the review and organizes them i
 - [ ] 8 Improve cooldown message in main area
 - [ ] 9 Refund on early hard failures (optional)
 - [ ] 10 Decide on `verify_image_tool` usage
-- [ ] 11 Trim requirements
+<!-- 11 Trim requirements — removed -->
 - [ ] 12 Reuse `sanitize_topic_for_filename` in `app.py`
 - [ ] 13 Standardize model aliases (CLI/UI)
-- [ ] 14 Add markdown fallback + chunking (future)
+- [x] 14 Add markdown fallback + chunking (future)
 - [ ] 15 Add basic tests (future)
 
 ---
