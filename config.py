@@ -29,12 +29,12 @@ UI_CONFIG = {
 
 # Example Topics
 EXAMPLE_TOPICS = [
-    "Machine Learning in Healthcare",
-    "Blockchain Technology Applications", 
-    "Quantum Computing Developments",
-    "Sustainable Energy Solutions",
-    "Space Exploration Technologies",
-    "Climate Change Impact"
+    "Rise of AI startups in Silicon Valley and their impact on the economy",
+    "Impact of Chinese EV brands on the European automobile industry",
+    "AI-driven optimization of renewable energy grids and storage",
+    "Ethical implications of generative AI in education",
+    "Quantum computing’s near-term applications in drug discovery",
+    "The role of AI in cybersecurity threat detection and response",
 ]
 
 # Research Configuration
@@ -43,3 +43,19 @@ RESEARCH_CONFIG = {
     "MIN_CITATIONS": 3,  # Minimum number of citations
     "SEARCH_DEPTH": 10,  # Number of search results to analyze
 } 
+
+# Model selection mapping
+# Display names shown in the UI mapped to internal identifiers used by backend
+MODEL_OPTIONS_DISPLAY = [
+    "Gemini-2.0-flash",
+    "Gemini-2.0-flash-lite",
+    "GPT-4o-mini",
+    "Gemini-1.5-flash",
+]
+
+MODEL_DISPLAY_TO_INTERNAL = {
+    "GPT-4o-mini": "openai",
+    "Gemini-1.5-flash": "gemini-1.5-flash",
+    "Gemini-2.0-flash": "gemini-2.0-flash",
+    "Gemini-2.0-flash-lite": "gemini-2.0-flash-lite",
+}
