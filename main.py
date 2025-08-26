@@ -117,6 +117,102 @@ def _try_parse_json_candidates(text: str) -> dict | None:
     return None
 
 
+# ------------------------ Markdown / Chunk Fallbacks ------------------------
+def _chunk_text(text: str, max_len: int = 12000) -> list[str]:
+    if not text:
+        return []
+    return [text[i:i+max_len] for i in range(0, len(text), max_len)]
+
+
+def _extract_markdown_sections(md: str) -> dict:
+    """Very simple markdown section extractor. Returns partial fields if found."""
+    sections = {
+        "topic": None,
+        "abstract": None,
+        "introduction": None,
+        "detailed_research": None,
+        "conclusion": None,
+        "citations": [],
+        "sources": [],
+        "tools_used": [],
+        "keywords": [],
+        "page_count": 0,
+        "confidence_score": 0.0,
+        "last_updated": "",
+    }
+    try:
+        import re as _re
+        # Topic: first H1 or first line
+        m = _re.search(r"^#\s+(.+)$", md, flags=_re.MULTILINE)
+        if m:
+            sections["topic"] = m.group(1).strip()
+        else:
+            first_line = md.strip().splitlines()[0] if md.strip().splitlines() else ""
+            sections["topic"] = first_line.strip("# ")[:120]
+
+        def grab(header: str) -> str:
+            # Capture text from a header until the next header
+            pattern = rf"(?:^|\n)#{1,6}\s*{header}\b[\s\S]*?(?=(?:\n#{1,6}\s)|\Z)"
+            match = _re.search(pattern, md, flags=_re.IGNORECASE)
+            if not match:
+                return ""
+            # Remove the header line itself
+            block = match.group(0)
+            lines = block.splitlines()
+            return "\n".join(lines[1:]).strip()
+
+        sections["abstract"] = grab("Abstract")
+        sections["introduction"] = grab("Introduction")
+        sections["detailed_research"] = grab("Detailed Research") or grab("Body") or grab("Main Content")
+        sections["conclusion"] = grab("Conclusion")
+
+        # Citations/References: collect bullet points in the section
+        refs_block = grab("Citations") or grab("References") or grab("Bibliography")
+        if refs_block:
+            sections["citations"] = [ln.strip("- ") for ln in refs_block.splitlines() if ln.strip().startswith("-")]
+
+        # Keywords: comma separated
+        keys_block = grab("Keywords")
+        if keys_block:
+            sections["keywords"] = [k.strip() for k in keys_block.split(",") if k.strip()]
+
+        # Heuristics: if any core sections were found, compute a page_count estimate
+        core_len = sum(len(sections[k] or "") for k in ["abstract", "introduction", "detailed_research", "conclusion"])
+        if core_len > 0:
+            sections["page_count"] = max(1, core_len // 2500)
+            sections["confidence_score"] = 0.5
+    except Exception:
+        pass
+    return sections
+
+
+def _markdown_fallback(raw_text: str) -> Optional[ResearchResponse]:
+    if not raw_text:
+        return None
+    sections = _extract_markdown_sections(raw_text)
+    # If nothing meaningful was extracted, abort
+    if not any([sections.get("abstract"), sections.get("introduction"), sections.get("detailed_research"), sections.get("conclusion")]):
+        return None
+    # Fill required fields with defaults if missing
+    filled = {
+        "topic": sections.get("topic") or "Untitled",
+        "abstract": sections.get("abstract") or "",
+        "introduction": sections.get("introduction") or "",
+        "detailed_research": sections.get("detailed_research") or "",
+        "conclusion": sections.get("conclusion") or "",
+        "citations": sections.get("citations") or [],
+        "sources": sections.get("sources") or [],
+        "tools_used": sections.get("tools_used") or [],
+        "keywords": sections.get("keywords") or [],
+        "page_count": sections.get("page_count") or 0,
+        "confidence_score": sections.get("confidence_score") or 0.0,
+        "last_updated": sections.get("last_updated") or "",
+    }
+    try:
+        return ResearchResponse(**filled)
+    except Exception:
+        return None
+
 def _extract_text_from_message(message: object) -> str:
     """Best-effort extraction of text from various LangChain message types."""
     try:
@@ -395,6 +491,25 @@ def generate_report(query, model_choice):
             if so_obj is not None:
                 structured_response = so_obj
                 print("Gemini structured-output second pass succeeded.")
+        # Markdown fallback (last resort) and chunked handling
+        if structured_response is None:
+            # If extremely large, try chunking to isolate a likely JSON section
+            if len(output_text) > 20000:
+                for chunk in _chunk_text(output_text, max_len=12000):
+                    data = _try_parse_json_candidates(chunk)
+                    if data is not None:
+                        try:
+                            structured_response = ResearchResponse(**data)
+                            print("Parsed from chunked JSON candidate.")
+                            break
+                        except Exception:
+                            pass
+            # If still None, try markdown fallback
+            if structured_response is None:
+                md_obj = _markdown_fallback(output_text)
+                if md_obj is not None:
+                    structured_response = md_obj
+                    print("Markdown fallback succeeded.")
     return raw_response, structured_response
 
 def main():
