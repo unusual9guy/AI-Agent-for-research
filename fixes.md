@@ -110,7 +110,8 @@ This plan addresses the issues identified during the review and organizes them i
 
 ## Implementation Order Checklist
 - [x] 1 Harden JSON extraction
-- [ ] 2 Prefer structured output where available
+- [x] 2 Prefer structured output where available
+  - Implemented for OpenAI and Gemini (second-pass normalization)
 - [x] 3 Secure report rendering (no unsafe HTML in content)
 - [x] 4 Add developer diagnostics toggle
 - [x] 5 Use `EXAMPLE_TOPICS` from config
