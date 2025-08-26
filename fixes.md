@@ -116,6 +116,8 @@ This plan addresses the issues identified during the review and organizes them i
 - [x] 5 Use `EXAMPLE_TOPICS` from config
 - [x] 6 Wire `API_CONFIG` into `set_llm` and centralize mapping
 - [x] 7 Update README model list and CLI examples
+- [x] 8 Improve cooldown message in main area
+- [x] 9 Refund on early hard failures (optional)
 - [ ] 5 Use `EXAMPLE_TOPICS` from config
 - [ ] 6 Wire `API_CONFIG` into `set_llm` and centralize mapping
 - [ ] 7 Update README model list and CLI examples
