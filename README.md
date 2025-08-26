@@ -26,7 +26,7 @@ You can try the app here: `https://ai-agent-for-research.onrender.com`
 |-----------|------------|---------|
 | **Frontend** | 🌐 [Streamlit](https://streamlit.io/) | Modern web interface and user experience |
 | **Framework** | 🦜 [LangChain](https://langchain.com/) | Agent orchestration and tool management |
-| **LLM Providers** | 🤖 OpenAI GPT-4, Google Gemini | Natural language processing and generation |
+| **LLM Providers** | 🤖 OpenAI GPT-4o-mini, Google Gemini (1.5/2.0) | Natural language processing and generation |
 | **Search Tools** | 🌐 Tavily API, Wikipedia API, DuckDuckGo | Information retrieval and web searching |
 | **Data Validation** | 📋 Pydantic | Output structure validation and parsing |
 | **Environment** | 🐍 Python 3.8+ | Core programming language |
@@ -112,11 +112,13 @@ The web interface will open in your browser with the following features:
 For command-line usage:
 
 ```bash
-# Using OpenAI GPT-4
+# Using OpenAI
 python main.py openai
 
-# Using Google Gemini
-python main.py google_genai
+# Using Google Gemini (choose one of the supported options)
+python main.py gemini-1.5-flash
+python main.py gemini-2.0-flash
+python main.py gemini-2.0-flash-lite
 ```
 
 ## 🎨 Interface Features
