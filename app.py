@@ -2,6 +2,9 @@ import streamlit as st
 import re
 from datetime import datetime, timedelta
 import time
+import io
+from typing import Optional
+from pdf_export import markdown_to_pdf_bytes
 
 # Import your backend logic
 from main import ResearchResponse, generate_report
@@ -567,6 +570,23 @@ if st.session_state.get('md_content'):
         mime="text/markdown",
         use_container_width=True
     )
+
+    # --- PDF Export ---
+    # Use the extracted helper
+
+    pdf_bytes = markdown_to_pdf_bytes(st.session_state.get('edited_md', st.session_state.get('md_content', "")))
+    pdf_filename = sanitize_topic_for_filename(topic)[:50] + "_output.pdf" if topic else "research_report_output.pdf"
+
+    if pdf_bytes:
+        st.download_button(
+            label="📑 Download as PDF",
+            data=pdf_bytes,
+            file_name=pdf_filename,
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    else:
+        st.info("PDF export requires WeasyPrint or ReportLab. Install one of them to enable PDF downloads.")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
