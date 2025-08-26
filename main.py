@@ -117,6 +117,31 @@ def _try_parse_json_candidates(text: str) -> dict | None:
     return None
 
 
+def _extract_text_from_message(message: object) -> str:
+    """Best-effort extraction of text from various LangChain message types."""
+    try:
+        if isinstance(message, str):
+            return message
+        content = getattr(message, "content", None)
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for part in content:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict):
+                    # Newer providers may return {type: 'text', text: '...'}
+                    text_val = part.get("text") if isinstance(part.get("text"), str) else None
+                    if text_val:
+                        parts.append(text_val)
+            return "\n".join(parts)
+        # Fallback to string repr
+        return str(message)
+    except Exception:
+        return str(message)
+
+
 def _structured_output_via_openai(raw_text: str, temperature: float) -> Optional[ResearchResponse]:
     """Second-pass: ask OpenAI to return a strict ResearchResponse via structured output.
     Returns None on failure.
@@ -176,26 +201,47 @@ def _structured_output_via_openai(raw_text: str, temperature: float) -> Optional
 
 
 def _structured_output_via_gemini(raw_text: str, temperature: float) -> Optional[ResearchResponse]:
-    """Second-pass: ask Gemini to emit ONLY a JSON object matching ResearchResponse. Returns None on failure."""
+    """Second-pass: ask Gemini to emit a strict ResearchResponse via structured-output when available.
+    Falls back to text+JSON parsing. Returns None on failure.
+    """
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        llm = ChatGoogleGenerativeAI(
-            model=API_CONFIG.get("GOOGLE_MODEL", "gemini-1.5-flash"),
-            temperature=temperature,
-        )
-        prompt = (
-            "You will receive content that should be reformatted into a JSON object that exactly matches this schema fields: "
-            "topic, abstract, introduction, detailed_research, conclusion, citations, sources, tools_used, keywords, page_count, confidence_score, last_updated. "
-            "Return ONLY the JSON object, with no extra text or code fences. If a field is missing, use an empty string, an empty list, or 0 as appropriate.\n\n"
-            "Content:\n{content}"
-        )
-        response = llm.invoke(prompt.format(content=raw_text))
-        text_response = getattr(response, "content", None)
-        if not isinstance(text_response, str):
-            text_response = str(response)
-        data = _try_parse_json_candidates(text_response)
-        if data is not None:
-            return ResearchResponse(**data)
+        # Prefer structured output if supported
+        try:
+            llm_struct = ChatGoogleGenerativeAI(
+                model=API_CONFIG.get("GOOGLE_MODEL", "gemini-2.0-flash"),
+                temperature=temperature,
+            ).with_structured_output(ResearchResponse)
+            instruction = (
+                "Reformat the provided content into the exact ResearchResponse schema without adding facts. "
+                "If a field is missing, set it to an empty string, 0, or an empty list, as appropriate. "
+                "Return only the structured object."
+            )
+            result = llm_struct.invoke({
+                "content": raw_text,
+                "instruction": instruction,
+            })
+            if isinstance(result, ResearchResponse):
+                return result
+            if isinstance(result, dict):
+                return ResearchResponse(**result)
+        except Exception:
+            # Fallback to plain text prompting and JSON extraction
+            llm = ChatGoogleGenerativeAI(
+                model=API_CONFIG.get("GOOGLE_MODEL", "gemini-2.0-flash"),
+                temperature=temperature,
+            )
+            prompt = (
+                "You will receive content that should be reformatted into a JSON object that exactly matches this schema fields: "
+                "topic, abstract, introduction, detailed_research, conclusion, citations, sources, tools_used, keywords, page_count, confidence_score, last_updated. "
+                "Return ONLY the JSON object, with no extra text or code fences. If a field is missing, use an empty string, an empty list, or 0 as appropriate.\n\n"
+                "Content:\n{content}"
+            )
+            response = llm.invoke(prompt.format(content=raw_text))
+            text_response = _extract_text_from_message(response)
+            data = _try_parse_json_candidates(text_response)
+            if data is not None:
+                return ResearchResponse(**data)
     except Exception:
         return None
     return None
@@ -367,6 +413,12 @@ def main():
 
     # setting the type of LLM based on the command line argument
     type = sys.argv[1].lower()
+    # CLI alias mapping to match UI friendliness
+    alias_map = {
+        "google_genai": "gemini-1.5-flash",
+        "gemini": "gemini-1.5-flash",
+    }
+    type = alias_map.get(type, type)
 
     # checking if the type is valid
     if type not in ["gemini-1.5-flash", "openai", "gemini-2.0-flash", "gemini-2.0-flash-lite"]: #"ollama", #groq, "gemini-2.5-flash", "gemini-2.5-flash-lite"
