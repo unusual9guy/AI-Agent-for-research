@@ -142,18 +142,26 @@ def _extract_markdown_sections(md: str) -> dict:
     }
     try:
         import re as _re
-        # Topic: first H1 or first line
-        m = _re.search(r"^#\s+(.+)$", md, flags=_re.MULTILINE)
+        import textwrap as _tw
+        # Normalize indentation
+        md = _tw.dedent(md)
+        # Topic: first H1 or first line (allow leading whitespace)
+        m = _re.search(r"^\s*#\s+(.+)$", md, flags=_re.MULTILINE)
         if m:
             sections["topic"] = m.group(1).strip()
         else:
             first_line = md.strip().splitlines()[0] if md.strip().splitlines() else ""
             sections["topic"] = first_line.strip("# ")[:120]
 
-        def grab(header: str) -> str:
-            # Capture text from a header until the next header
-            pattern = rf"(?:^|\n)#{1,6}\s*{header}\b[\s\S]*?(?=(?:\n#{1,6}\s)|\Z)"
-            match = _re.search(pattern, md, flags=_re.IGNORECASE)
+        flags = _re.IGNORECASE | _re.MULTILINE
+
+        def grab(header: str, level: int = 2) -> str:
+            """Capture text from a header of the given level until the next header of the same level.
+            This allows subheaders (e.g., ###) to remain inside the captured block for Detailed Research.
+            """
+            hashes = "#" * level
+            pattern = rf"^\s*{hashes}\s*{header}\b[\s\S]*?(?=^\s*{hashes}\s|\Z)"
+            match = _re.search(pattern, md, flags=flags)
             if not match:
                 return ""
             # Remove the header line itself
@@ -161,10 +169,10 @@ def _extract_markdown_sections(md: str) -> dict:
             lines = block.splitlines()
             return "\n".join(lines[1:]).strip()
 
-        sections["abstract"] = grab("Abstract")
-        sections["introduction"] = grab("Introduction")
-        sections["detailed_research"] = grab("Detailed Research") or grab("Body") or grab("Main Content")
-        sections["conclusion"] = grab("Conclusion")
+        sections["abstract"] = grab("Abstract", level=2)
+        sections["introduction"] = grab("Introduction", level=2)
+        sections["detailed_research"] = grab("Detailed Research", level=2) or grab("Body", level=2) or grab("Main Content", level=2)
+        sections["conclusion"] = grab("Conclusion", level=2)
 
         # Citations/References: collect bullet points in the section
         refs_block = grab("Citations") or grab("References") or grab("Bibliography")
