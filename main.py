@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 from tools import TOOLS, save_to_txt
-from typing import List
+from typing import List, Optional
 from cl_ui import *
 from config import API_CONFIG
 import re
@@ -114,6 +114,90 @@ def _try_parse_json_candidates(text: str) -> dict | None:
             return json.loads(candidate)
         except Exception:
             return None
+    return None
+
+
+def _structured_output_via_openai(raw_text: str, temperature: float) -> Optional[ResearchResponse]:
+    """Second-pass: ask OpenAI to return a strict ResearchResponse via structured output.
+    Returns None on failure.
+    """
+    try:
+        from langchain_openai import ChatOpenAI
+        structured_llm = ChatOpenAI(
+            model=API_CONFIG.get("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=temperature,
+        ).with_structured_output(ResearchResponse)
+
+        instruction = (
+            "Reformat the provided content into the exact ResearchResponse schema without adding facts. "
+            "If a field is missing, set it to an empty string, 0, or an empty list, as appropriate. "
+            "Return only the structured object."
+        )
+        result = structured_llm.invoke({
+            "content": raw_text,
+            "instruction": instruction,
+        })
+        if isinstance(result, ResearchResponse):
+            return result
+        if isinstance(result, dict):
+            return ResearchResponse(**result)
+    except Exception:
+        return None
+    return None
+
+
+def _structured_output_via_openai(raw_text: str, temperature: float) -> Optional[ResearchResponse]:
+    """Second-pass: ask OpenAI to return a strict ResearchResponse via structured output.
+    Returns None on failure.
+    """
+    try:
+        from langchain_openai import ChatOpenAI
+        structured_llm = ChatOpenAI(
+            model=API_CONFIG.get("OPENAI_MODEL", "gpt-4o-mini"),
+            temperature=temperature,
+        ).with_structured_output(ResearchResponse)
+
+        instruction = (
+            "Reformat the provided content into the exact ResearchResponse schema without adding facts. "
+            "If a field is missing, set it to an empty string, 0, or an empty list, as appropriate. "
+            "Return only the structured object."
+        )
+        result = structured_llm.invoke({
+            "content": raw_text,
+            "instruction": instruction,
+        })
+        if isinstance(result, ResearchResponse):
+            return result
+        if isinstance(result, dict):
+            return ResearchResponse(**result)
+    except Exception:
+        return None
+    return None
+
+
+def _structured_output_via_gemini(raw_text: str, temperature: float) -> Optional[ResearchResponse]:
+    """Second-pass: ask Gemini to emit ONLY a JSON object matching ResearchResponse. Returns None on failure."""
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        llm = ChatGoogleGenerativeAI(
+            model=API_CONFIG.get("GOOGLE_MODEL", "gemini-1.5-flash"),
+            temperature=temperature,
+        )
+        prompt = (
+            "You will receive content that should be reformatted into a JSON object that exactly matches this schema fields: "
+            "topic, abstract, introduction, detailed_research, conclusion, citations, sources, tools_used, keywords, page_count, confidence_score, last_updated. "
+            "Return ONLY the JSON object, with no extra text or code fences. If a field is missing, use an empty string, an empty list, or 0 as appropriate.\n\n"
+            "Content:\n{content}"
+        )
+        response = llm.invoke(prompt.format(content=raw_text))
+        text_response = getattr(response, "content", None)
+        if not isinstance(text_response, str):
+            text_response = str(response)
+        data = _try_parse_json_candidates(text_response)
+        if data is not None:
+            return ResearchResponse(**data)
+    except Exception:
+        return None
     return None
 
 
@@ -249,6 +333,22 @@ def generate_report(query, model_choice):
         except Exception as fallback_error:
             print(f"Fallback parsing also failed: {str(fallback_error)}")
             structured_response = None
+        # Structured-output second pass for OpenAI
+        if structured_response is None and model_choice == "openai":
+            print("Attempting structured-output second pass with OpenAI...")
+            temperature = API_CONFIG.get("TEMPERATURE", 0.0)
+            so_obj = _structured_output_via_openai(output_text, temperature)
+            if so_obj is not None:
+                structured_response = so_obj
+                print("Structured-output second pass succeeded.")
+        # Structured-output second pass for Gemini
+        if structured_response is None and model_choice.startswith("gemini"):
+            print("Attempting structured-output second pass with Gemini...")
+            temperature = API_CONFIG.get("TEMPERATURE", 0.0)
+            so_obj = _structured_output_via_gemini(output_text, temperature)
+            if so_obj is not None:
+                structured_response = so_obj
+                print("Gemini structured-output second pass succeeded.")
     return raw_response, structured_response
 
 def main():
