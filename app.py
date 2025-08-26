@@ -28,7 +28,7 @@ def validate_topic(topic: str) -> tuple[bool, str]:
     if len(topic_clean) < 3:
         return False, "Topic must be at least 3 characters long"
     
-    if len(topic_clean) > 500:
+    if len(topic_clean) > 600:
         return False, "Topic is too long (max 500 characters)"
     
     # Check for potentially harmful content
