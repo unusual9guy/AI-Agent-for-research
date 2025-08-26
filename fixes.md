@@ -113,6 +113,9 @@ This plan addresses the issues identified during the review and organizes them i
 - [ ] 2 Prefer structured output where available
 - [x] 3 Secure report rendering (no unsafe HTML in content)
 - [x] 4 Add developer diagnostics toggle
+- [x] 5 Use `EXAMPLE_TOPICS` from config
+- [x] 6 Wire `API_CONFIG` into `set_llm` and centralize mapping
+- [x] 7 Update README model list and CLI examples
 - [ ] 5 Use `EXAMPLE_TOPICS` from config
 - [ ] 6 Wire `API_CONFIG` into `set_llm` and centralize mapping
 - [ ] 7 Update README model list and CLI examples
