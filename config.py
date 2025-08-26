@@ -24,7 +24,7 @@ UI_CONFIG = {
     "COLUMN_LAYOUT": [1, 2, 1],  # Layout ratios for main content
     "TEXT_AREA_HEIGHT": 400,  # Height for text area in pixels
     "PROGRESS_STEPS": [0, 50, 100],  # Progress bar steps
-    "SHOW_DEBUG": True,  # Toggle developer diagnostics in UI
+    "SHOW_DEBUG": False,  # Toggle developer diagnostics in UI
 }
 
 # Example Topics
