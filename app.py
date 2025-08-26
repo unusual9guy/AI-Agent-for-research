@@ -6,6 +6,7 @@ import time
 # Import your backend logic
 from main import ResearchResponse, generate_report
 from config import EXAMPLE_TOPICS, UI_CONFIG, RATE_LIMIT_CONFIG, MODEL_OPTIONS_DISPLAY, MODEL_DISPLAY_TO_INTERNAL
+from tools import sanitize_topic_for_filename
 
 # Initialize session state
 if 'is_processing' not in st.session_state:
@@ -550,19 +551,13 @@ if st.session_state.get('md_content'):
     st.markdown("### 📥 Download Your Research Report")
     
     def get_download_filename():
-        """Generate a safe filename for download"""
-        import re
+        """Generate a safe filename for download using shared sanitizer"""
         if not topic:
             return "research_report_output.md"
-        
-        # Remove special characters and replace spaces with underscores
-        safe_topic = re.sub(r'[^a-zA-Z0-9\s]', '', topic.strip())
-        safe_topic = re.sub(r'\s+', '_', safe_topic)
-        
+        safe_topic = sanitize_topic_for_filename(topic)
         # Limit length to prevent overly long filenames
         if len(safe_topic) > 50:
             safe_topic = safe_topic[:50]
-        
         return f"{safe_topic}_output.md"
     
     st.download_button(
