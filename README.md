@@ -1,10 +1,6 @@
 # 🤖 AI Research Buddy
 An intelligent AI research assistant built with LangChain and Streamlit that can conduct comprehensive research on any topic and generate professional academic-style reports. The application features a modern, user-friendly web interface with multiple LLM providers and advanced research capabilities.
 
-## Demo Video
-
-[![Watch the demo](https://img.youtube.com/vi/-d9rq-F2kyQ/0.jpg)](https://youtu.be/-d9rq-F2kyQ)
-
 ## 🌐 Live Demo
 You can try the app here: 
 `
