@@ -90,7 +90,7 @@ This plan addresses the issues identified during the review and organizes them i
 
 ### Phase 6 — Optional Enhancements (Future)
 14) Markdown fallback parser and chunked parsing
-   - Files: `main.py` (utilities), new helper module (e.g., `parsing_utils.py`)
+   - Files: `main.py` (utilities)
    - Actions:
      - Implement markdown-to-structured fallback per `scope.md` and chunked parsing for very large outputs.
    - Acceptance: Oversized responses from larger models succeed via fallback.
@@ -116,17 +116,13 @@ This plan addresses the issues identified during the review and organizes them i
 - [x] 9 Refund on early hard failures (optional)
 - [x] 12 Reuse `sanitize_topic_for_filename` in `app.py`
 - [x] 13 Standardize model aliases (CLI/UI)
-- [ ] 5 Use `EXAMPLE_TOPICS` from config
-- [ ] 6 Wire `API_CONFIG` into `set_llm` and centralize mapping
-- [ ] 7 Update README model list and CLI examples
-- [ ] 8 Improve cooldown message in main area
-- [ ] 9 Refund on early hard failures (optional)
-- [ ] 10 Decide on `verify_image_tool` usage
-<!-- 11 Trim requirements — removed -->
-- [ ] 12 Reuse `sanitize_topic_for_filename` in `app.py`
-- [ ] 13 Standardize model aliases (CLI/UI)
 - [x] 14 Add markdown fallback + chunking (future)
-- [ ] 15 Add basic tests (future)
+- [x] 15 Add basic tests (future)
+
+### Additional Completed Items
+- [x] PDF export with WeasyPrint first and ReportLab fallback
+- [x] PDF formatting polish (headings, bullets, nested bullets, inline bold/italic)
+- [x] Refactor: `pdf_export.py` extracted and imported by `app.py`
 
 ---
 
