@@ -1,145 +1,68 @@
-# 🤖 AI Research Buddy
-An intelligent AI research assistant built with LangChain and Streamlit that can conduct comprehensive research on any topic and generate professional academic-style reports. The application features a modern, user-friendly web interface with multiple LLM providers and advanced research capabilities.
+# AI-Agent-for-research
 
-## 🌐 Live Demo
- ### You can try the app here: [`https://ai-agent-for-research.onrender.com`](https://ai-agent-for-research.onrender.com) 
+A Streamlit web app that takes a topic and writes a structured research report, with a hosted demo at https://ai-agent-for-research.onrender.com.
 
-## ✨ Features
-- 🌐 **Modern Web Interface**: Beautiful Streamlit-based UI with dark theme and gradient styling
-- 🔍 **Multi-Source Research**: Integrates Wikipedia, Tavily web search, and custom tools
-- 🧠 **Multiple LLM Support**: Works with OpenAI GPT and Google Gemini
-- 📄 **Structured Output**: Generates properly formatted academic reports with citations
-- 💾 **Automatic File Saving**: Saves research outputs to organized files
-- 🎯 **Interactive Topic Selection**: Click-to-select example topics for quick research
-- 👁️ **Live Preview**: View rendered reports before editing
-- ✏️ **In-App Editing**: Edit generated reports directly in the interface
-- 📥 **Easy Download**: Download reports in markdown format
-- 🔒 **Rate Limiting**: Built-in API usage limits to prevent excessive costs
-- 🎓 **Professional Formatting**: Produces research reports with abstracts, introductions, detailed analysis, and conclusions
-## 🛠️ Tech Stack
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Frontend** | 🌐 [Streamlit](https://streamlit.io/) | Modern web interface and user experience |
-| **Framework** | 🦜 [LangChain](https://langchain.com/) | Agent orchestration and tool management |
-| **LLM Providers** | 🤖 OpenAI GPT-4o-mini, Google Gemini (1.5/2.0) | Natural language processing and generation |
-| **Search Tools** | 🌐 Tavily API, Wikipedia API | Information retrieval and web searching |
-| **Data Validation** | 📋 Pydantic v2 | Output structure validation and parsing |
-| **Environment** | 🐍 Python 3.10+ recommended | Core programming language |
-| **Configuration** | 🔐 python-dotenv | Environment variable management |
-| **Styling** | 🎨 Custom CSS | Modern gradient design and responsive layout |
-## 📋 Prerequisites
-- Python 3.8+ 🐍
-- API keys for your chosen LLM provider(s) 🔑
-- Tavily API key for web search functionality 🌐
-## 🚀 Installation
-### 1. 🏗️ Create Virtual Environment
-```bash
-# Create virtual environment
-python -m venv ai_research_env
-# Activate virtual environment
-# On Windows:
-ai_research_env\Scripts\activate
-# On macOS/Linux:
-source ai_research_env/bin/activate
+The app runs on LangChain, a Python framework for building LLM applications. The demo sits on Render, a hosting service, and may take up to a minute to wake up on first visit.
+
+## Problem and approach
+
+Writing a first-draft report on an unfamiliar topic means searching, reading and formatting. This app hands the search and drafting to a tool-calling agent and leaves review to you.
+
+1. You pick a model (OpenAI GPT-4o-mini or a Google Gemini model) and enter a topic.
+2. A LangChain agent (`main.py`) calls tools: Tavily web search (a search API built for LLMs), Wikipedia lookup and a save-to-file tool.
+3. The model returns a report with an abstract, introduction, analysis and conclusion. Pydantic (a Python validation library) parses it into a fixed structure, with a fallback to plain Markdown if the model returns malformed output.
+4. You preview the report, edit it in the page, and download it as Markdown or PDF.
+5. `config.py` caps use at 4 requests per session to limit API cost.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A[Topic and model choice] --> B[Streamlit app<br/>app.py]
+  B --> C[Tool-calling agent<br/>main.py, LangChain]
+  C --> D[Tavily search]
+  C --> E[Wikipedia]
+  D --> F[LLM drafts report<br/>OpenAI or Gemini]
+  E --> F
+  F --> G[Pydantic parsing<br/>Markdown fallback]
+  G --> H[Preview, edit, download<br/>Markdown or PDF]
 ```
-### 2. 📦 Install Dependencies
-```bash
+
+## Results
+
+This repo has no measured results. It demonstrates an agent loop with tools, structured output with a fallback, session rate limiting and an editable report view. I have not measured report accuracy or cost per report. The `tests/` folder has pytest files for output parsing and utility functions. Example reports are in `outputs/`.
+
+## Run it
+
+You need Python 3.10 or newer and an API key for the model provider you choose, plus a Tavily key for search.
+
+```powershell
+git clone https://github.com/unusual9guy/AI-Agent-for-research.git
+cd AI-Agent-for-research
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
-
-### 3. 🔐 Set Up Environment Variables
-Create a `.env` file in the project root:
-```env
-OPENAI_API_KEY=your_openai_api_key
-GOOGLE_API_KEY=your_google_api_key
-TAVILY_API_KEY=your_tavily_api_key
-```
-
-You only need the keys for the providers you plan to use.
-
-### 4. ▶️ Run the App (Streamlit)
-```bash
+# create a .env file with the variables below, then:
 streamlit run app.py
 ```
 
-The UI lets you choose a model, enter a topic, preview, edit, and download the report (Markdown or PDF).
+PDF export is optional and uses `reportlab` or `weasyprint` when installed (`pip install reportlab`). Without them the app offers Markdown only.
 
-## 🧭 Usage
-- Choose a model in the sidebar (OpenAI or Gemini variants).
-- Enter a topic or click an example topic.
-- Click Generate; progress and rate limits are shown.
-- Preview the Markdown report; optionally edit in the text area.
-- Download as Markdown or PDF.
+| Variable | Purpose |
+|---|---|
+| `OPENAI_API_KEY` | Needed for the OpenAI model option |
+| `GOOGLE_API_KEY` | Needed for the Gemini model options |
+| `TAVILY_API_KEY` | Web search |
 
-Notes:
-- If a provider returns malformed or partial JSON, the app uses robust fallbacks (structured-output second pass for OpenAI/Gemini, then markdown fallback) to avoid failures.
-- The error banner appears below the search bar if something fails (API keys, network, etc.) and requests are refunded on hard errors.
+You only need the key for the provider you use, plus the Tavily key.
 
-## ⚙️ Configuration
-Edit `config.py`:
-- `RATE_LIMIT_CONFIG`: session limits and cooldown.
-- `UI_CONFIG`: layout, text area height, progress steps, `SHOW_DEBUG` toggle (when True, extra debug info is shown on parse errors).
-- `EXAMPLE_TOPICS`: topics shown as quick buttons.
+## Limitations and next steps
 
-Model mapping used by the UI lives in `config.py` (`MODEL_OPTIONS_DISPLAY`, `MODEL_DISPLAY_TO_INTERNAL`).
+- Reports are only as good as the sources the search tools return, and nothing checks claims against them. Read them as drafts.
+- The hosted demo runs on a free tier, so the first request can be slow.
+- The 4-request session limit is a cost guard, not a quota system.
+- The generated reports in `outputs/` are examples and are not fact-checked.
 
-## 🧪 Testing
-Unit tests are included for parsing helpers and filename sanitizer.
-```bash
-pip install pytest
-pytest -q
-```
+## Screenshot
 
-## 🧾 PDF Export
-PDF export attempts WeasyPrint first (best HTML/CSS fidelity), then falls back to ReportLab with heading, nested bullet, and inline bold/italic support.
-
-Install one of these:
-- WeasyPrint (needs system libs, recommended for best fidelity):
-  - Windows: install MSYS2 (UCRT64) Pango/Harfbuzz/Freetype packages and add `C:\\msys64\\ucrt64\\bin` to PATH. Then:
-    ```powershell
-    pip install weasyprint pydyf tinyhtml5 tinycss2 cssselect2 pyphen Pillow fonttools cffi
-    ```
-  - Linux/macOS: follow WeasyPrint docs; usually `apt/yum/brew` + `pip install weasyprint`.
-- ReportLab (simple fallback):
-  ```bash
-  pip install reportlab
-  ```
-
-## 🧱 Project Structure
-```
-AI-Agent-for-research/
-├── app.py                # Streamlit app (UI logic)
-├── main.py               # Core agent + parsing orchestration
-├── tools.py              # Tools (search, save, image verify)
-├── pdf_export.py         # Markdown → PDF conversion (WeasyPrint/ReportLab)
-├── config.py             # UI and rate-limit configuration
-├── tests/                # Unit tests (pytest)
-├── outputs/              # Generated reports (markdown)
-├── requirements.txt
-├── README.md
-└── fixes.md              # Implementation plan and status
-```
-
-## 🧩 CLI (optional)
-You can still use the legacy CLI for quick checks:
-```bash
-# OpenAI
-python main.py openai
-
-# Gemini
-python main.py gemini-2.0-flash
-```
-
-## 🛟 Troubleshooting
-- Invalid API key: you’ll see a red banner below the search bar; requests are refunded.
-- Long/markdown-only outputs: parser falls back to provider structured output, then markdown fallback.
-- WeasyPrint errors on Windows: ensure Pango/Harfbuzz/Freetype DLLs are on PATH (see PDF Export).
-
-## 🗺️ Roadmap (scaling)
-- Frontend: React + Vite + TS
-- Backend: FastAPI with SSE/queue for long jobs
-- Persistence: Supabase (Auth, Postgres, Storage)
-- Observability: OpenTelemetry/Sentry, structured logs
-
-## 🤝 Contributing
-PRs and suggestions are welcome.
+TODO: add a screenshot or GIF of the app.
